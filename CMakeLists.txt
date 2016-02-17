@@ -32,6 +32,14 @@ set(Daemon_OUT ${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(daemon/daemon daemon_build)
 include(DaemonFlags)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/vulkan/include)
+
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
+
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
 
 AddApplication(

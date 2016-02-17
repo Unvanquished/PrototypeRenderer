@@ -1,3 +1,6 @@
 [submodule "daemon"]
 	path = daemon
 	url = https://github.com/Unvanquished/Unvanquished.git
+[submodule "external/glfw"]
+	path = external/glfw
+	url = https://github.com/glfw/glfw.git
