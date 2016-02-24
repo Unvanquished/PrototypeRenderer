@@ -1,0 +1,87 @@
+--- vk.xml.orig	2016-02-24 06:31:16.498257700 +0100
++++ vk.xml	2016-02-27 23:22:20.062805000 +0100
+@@ -117,14 +117,14 @@
+         <type category="basetype">typedef <type>uint32_t</type> <name>VkFlags</name>;</type>
+         <type category="basetype">typedef <type>uint64_t</type> <name>VkDeviceSize</name>;</type>
+         <!-- Basic C types, pulled in via vk_platform.h -->
+-        <type requires="vk_platform" name="void"/>
+-        <type requires="vk_platform" name="char"/>
+-        <type requires="vk_platform" name="float"/>
+-        <type requires="vk_platform" name="uint8_t"/>
+-        <type requires="vk_platform" name="uint32_t"/>
+-        <type requires="vk_platform" name="uint64_t"/>
+-        <type requires="vk_platform" name="int32_t"/>
+-        <type requires="vk_platform" name="size_t"/>
++        <type requires="vk_platform.h" name="void"/>
++        <type requires="vk_platform.h" name="char"/>
++        <type requires="vk_platform.h" name="float"/>
++        <type requires="vk_platform.h" name="uint8_t"/>
++        <type requires="vk_platform.h" name="uint32_t"/>
++        <type requires="vk_platform.h" name="uint64_t"/>
++        <type requires="vk_platform.h" name="int32_t"/>
++        <type requires="vk_platform.h" name="size_t"/>
+         <!-- Bitfield types -->
+         <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkFramebufferCreateFlags</name>;</type>               <!-- creation flags -->
+         <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkQueryPoolCreateFlags</name>;</type>                 <!-- creation flags -->
+@@ -332,36 +332,36 @@
+         <type name="VkDebugReportErrorEXT" category="enum"/>
+ 
+         <!-- The PFN_vk*Function types are used by VkAllocationCallbacks below -->
+-        <type category="funcpointer">typedef void (VKAPI_PTR *<name>PFN_vkInternalAllocationNotification</name>)(
++        <type category="funcpointer">typedef <type>void</type> (VKAPI_PTR *<name>PFN_vkInternalAllocationNotification</name>)(
+     <type>void</type>*                                       pUserData,
+     <type>size_t</type>                                      size,
+     <type>VkInternalAllocationType</type>                    allocationType,
+     <type>VkSystemAllocationScope</type>                     allocationScope);</type>
+-        <type category="funcpointer">typedef void (VKAPI_PTR *<name>PFN_vkInternalFreeNotification</name>)(
++        <type category="funcpointer">typedef <type>void</type> (VKAPI_PTR *<name>PFN_vkInternalFreeNotification</name>)(
+     <type>void</type>*                                       pUserData,
+     <type>size_t</type>                                      size,
+     <type>VkInternalAllocationType</type>                    allocationType,
+     <type>VkSystemAllocationScope</type>                     allocationScope);</type>
+-        <type category="funcpointer">typedef void* (VKAPI_PTR *<name>PFN_vkReallocationFunction</name>)(
++        <type category="funcpointer">typedef <type>void*</type> (VKAPI_PTR *<name>PFN_vkReallocationFunction</name>)(
+     <type>void</type>*                                       pUserData,
+     <type>void</type>*                                       pOriginal,
+     <type>size_t</type>                                      size,
+     <type>size_t</type>                                      alignment,
+     <type>VkSystemAllocationScope</type>                     allocationScope);</type>
+-        <type category="funcpointer">typedef void* (VKAPI_PTR *<name>PFN_vkAllocationFunction</name>)(
++        <type category="funcpointer">typedef <type>void*</type> (VKAPI_PTR *<name>PFN_vkAllocationFunction</name>)(
+     <type>void</type>*                                       pUserData,
+     <type>size_t</type>                                      size,
+     <type>size_t</type>                                      alignment,
+     <type>VkSystemAllocationScope</type>                     allocationScope);</type>
+-        <type category="funcpointer">typedef void (VKAPI_PTR *<name>PFN_vkFreeFunction</name>)(
++        <type category="funcpointer">typedef <type>void</type> (VKAPI_PTR *<name>PFN_vkFreeFunction</name>)(
+     <type>void</type>*                                       pUserData,
+     <type>void</type>*                                       pMemory);</type>
+ 
+     <!-- The PFN_vkVoidFunction type are used by VkGet*ProcAddr below -->
+-        <type category="funcpointer">typedef void (VKAPI_PTR *<name>PFN_vkVoidFunction</name>)(void);</type>
++        <type category="funcpointer">typedef <type>void</type> (VKAPI_PTR *<name>PFN_vkVoidFunction</name>)(void);</type>
+ 
+     <!-- The PFN_vkDebugReportCallbackEXT type are used by the DEBUG_REPORT extension-->
+-        <type category="funcpointer">typedef VkBool32 (VKAPI_PTR *<name>PFN_vkDebugReportCallbackEXT</name>)(
++        <type category="funcpointer">typedef <type>VkBool32</type> (VKAPI_PTR *<name>PFN_vkDebugReportCallbackEXT</name>)(
+     <type>VkDebugReportFlagsEXT</type>                       flags,
+     <type>VkDebugReportObjectTypeEXT</type>                  objectType,
+     <type>uint64_t</type>                                    object,
+@@ -2827,7 +2827,7 @@
+     <enums name="VkStencilFaceFlagBits" type="bitmask">
+         <enum bitpos="0"    name="VK_STENCIL_FACE_FRONT_BIT"                         comment="Front face"/>
+         <enum bitpos="1"    name="VK_STENCIL_FACE_BACK_BIT"                          comment="Back face"/>
+-        <enum value="0x3"   name="VK_STENCIL_FRONT_AND_BACK"                         comment="Front and back faces"/>
++        <enum value="0x3"   name="VK_STENCIL_FACE_FRONT_AND_BACK"                         comment="Front and back faces"/>
+     </enums>
+     <enums name="VkDescriptorPoolCreateFlagBits" type="bitmask">
+         <enum bitpos="0"    name="VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT" comment="Descriptor sets may be freed individually"/>
+@@ -2843,7 +2843,7 @@
+         <enum value="3"     name="VK_PRESENT_MODE_FIFO_RELAXED_KHR"/>
+     </enums>
+     <enums name="VkColorSpaceKHR" type="enum" expand="VK_COLORSPACE">
+-        <enum value="0"     name="VK_COLORSPACE_SRGB_NONLINEAR_KHR"/>
++        <enum value="0"     name="VK_COLOR_SPACE_SRGB_NONLINEAR_KHR"/>
+     </enums>
+     <enums name="VkDisplayPlaneAlphaFlagBitsKHR" type="bitmask">
+         <enum bitpos="0"    name="VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR"/>
