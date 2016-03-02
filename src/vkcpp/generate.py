@@ -227,9 +227,20 @@ class Constant:
         self.name = Name(split_SNAKE_CASE(element.attrib['name']))
         self.value = element.attrib['value']
 
+class Type:
+    def __init__(self):
+        self.parent_extension = None
+
+    def link(self, types):
+        pass
+
+    def required_types(self):
+        return []
+
 EnumValue = namedtuple('EnumValue', ['name', 'value'])
-class EnumType:
+class EnumType(Type):
     def __init__(self, element, factor):
+        Type.__init__(self)
         # Enums are defined as follows:
         #     <enums name="VkFoo" type="enum">
         #         <enum value="42" name="VK_FOO_BAR"/> ...
@@ -252,13 +263,11 @@ class EnumType:
 
         self.values.sort(key=lambda value: value.value)
 
-    def link(self, types):
-        pass
-
 BitmaskBit = namedtuple('BitmaskBit', ['name', 'bit'])
 BitmaskValue = namedtuple('BitmaskValue', ['name', 'value'])
-class BitmaskType:
+class BitmaskType(Type):
     def __init__(self, element):
+        Type.__init__(self)
         self.bits = []
         self.values = []
 
@@ -304,41 +313,31 @@ class BitmaskType:
         else:
             self.name.chunks.append('flags')
 
-    def link(self, types):
-        pass
-
-class SystemType:
+class SystemType(Type):
     def __init__(self, element):
+        Type.__init__(self)
         # System types are defined as follows:
         #     <type requires="header.h" name="foo"/>
         assert('name' in element.attrib and 'requires' in element.attrib)
         self.name = Name([element.attrib['name']])
         self.header = element.attrib['requires']
 
-    def link(self, types):
-        pass
-
-class BaseType:
+class BaseType(Type):
     def __init__(self, element):
+        Type.__init__(self)
         # Base types are defined as follows:
         #     <type category="basetype">typedef <type>system</type> <name>base</name>;</type>
         self.name = Name(split_CamelCase(element.find('name').text))
         self.base_type = element.find('type').text
 
-    def link(self, types):
-        pass
-
-class HandleType:
+class HandleType(Type):
     def __init__(self, element):
+        Type.__init__(self)
         # Handle types are defined as follows:
         #     <type category="handle" parent="foo"><type>VK_DEFINE_HANDLE</type>(<name>name</name>)</type>
         # Where VK_DEFINE_HANDLE can also be VK_DEFINE_NON_DISPATCHABLE_HANDLE
         self.name = Name(split_CamelCase(element.find('name').text))
         self.dispatchable = element.find('type').text == 'VK_DEFINE_HANDLE'
-
-    def link(self, types):
-        pass
-
 
 class StructMember(AnnotatedTypeAndName):
     def __init__(self, element):
@@ -346,8 +345,9 @@ class StructMember(AnnotatedTypeAndName):
         self.parse_regular_parameter(element)
         self.optional = 'optional' in element.attrib and element.attrib['optional'] == 'true'
 
-class StructType:
+class StructType(Type):
     def __init__(self, element, is_union):
+        Type.__init__(self)
         # Structure types are defined as follows:
         #   <type category="struct" name="foo">
         #       <member><type>bar</type><name>baz</name></member>
@@ -367,6 +367,9 @@ class StructType:
         for member in self.members:
             member.link(types)
 
+    def required_types(self):
+        return [member.typ for member in self.members]
+
 class FunctionParam(AnnotatedTypeAndName):
     def __init__(self, element=None):
         AnnotatedTypeAndName.__init__(self)
@@ -376,8 +379,9 @@ class FunctionParam(AnnotatedTypeAndName):
         else:
             self.optional = False
 
-class FnptrType:
+class FnptrType(Type):
     def __init__(self, element):
+        Type.__init__(self)
         # Function pointer types are defined as follows:
         #     <type category="funcpointer">typedef <type>foo</type> JUNK <name>PFN_vkBar</name>
         #         <type>baz</type> bazNameJUNK ...
@@ -398,6 +402,8 @@ class FnptrType:
         for param in self.params:
             param.link(types)
 
+    def required_types(self):
+        return [param.typ for param in self.params] + [self.return_type]
 
 class Function:
     def __init__(self, element):
@@ -425,10 +431,15 @@ class Function:
             else:
                 assert(child.tag in ('proto', 'validity', 'implicitexternsyncparams'))
 
+        self.parent_extension = None
+
     def link(self, types):
-        self.return_type = types[self.return_type.canonical_name()]
+        self.return_type = types[self.return_type.canonical_case()]
         for param in self.params:
             param.link(types)
+
+    def required_types(self):
+        return [param.typ for param in self.params] + [self.return_type]
 
 ExtensionEnumValue = namedtuple('ExtensionEnumValue', ['name', 'extends', 'value'])
 class Extension:
@@ -448,7 +459,7 @@ class Extension:
         self.name = Name(split_SNAKE_CASE(element.attrib['name']))
 
         self.required_types = []
-        self.required_commands = []
+        self.required_functions = []
         self.enum_values = []
 
         for require in element:
@@ -459,7 +470,7 @@ class Extension:
                     self.required_types.append(Name(split_Typename(required.attrib['name'])))
 
                 elif required.tag == 'command':
-                    self.required_commands.append(Name(split_camelCase(required.attrib['name'])))
+                    self.required_functions.append(Name(split_camelCase(required.attrib['name'])))
 
                 elif required.tag == 'enum':
                     # Some enum tags define the version of the extension, skip them.
@@ -478,6 +489,40 @@ class Extension:
                     value = direction * (1000000000 + (extension_number - 1) * 1000 + offset)
 
                     self.enum_values.append(ExtensionEnumValue(name, extends, value))
+
+    def link(self, types, functions):
+        own_types = set()
+        own_functions = set()
+        required_extensions = set()
+
+        def add_types(types):
+            for typ in types:
+                if typ.parent_extension != None:
+                    required_extensions.update((typ.parent_extension,))
+                else:
+                    typ.parent_extension = self
+                    own_types.update((typ,))
+                    add_types(typ.required_types())
+
+        add_types([types[typename.canonical_case()] for typename in self.required_types])
+
+        for function in [functions[name.canonical_case()] for name in self.required_functions]:
+            if function.parent_extension != None:
+                required_extensions.update((function.parent_extension,))
+            else:
+                function.parent_extension = self
+                own_functions.update((function,))
+                add_types(function.required_types())
+
+        #TODO(kangz) topo sort the types
+        self.required_types = list(own_types)
+        self.required_functions = sorted(list(own_functions), key = lambda function: function.name.canonical_case())
+        self.required_extensions = sorted(list(required_extensions), key = lambda extension: extension.name.canonical_case())
+
+        self.required_headers = set([typ.header for typ in self.required_types if isinstance(typ, SystemType)])
+        for extension in self.required_extensions:
+            self.required_headers.difference_update(extension.required_headers)
+        self.required_headers = list(self.required_headers)
 
 # A custom Jinja2 template loader that removes the extra indentation
 # of the template blocks so that the output is correctly indented
@@ -605,10 +650,29 @@ def parse_vulkan_xml(filename):
     for typ in enum_types + bitmask_types + system_types + base_types + handle_types + struct_types + fnptr_types:
         types[typ.name.canonical_case()] = typ
 
+    function_dict = {}
+    for function in functions:
+        function_dict[function.name.canonical_case()] = function
+
+    extension_dict = {}
+    for extension in extensions:
+        extension_dict[extension.name.canonical_case()] = extension
+
     for typ in types.values():
         typ.link(types)
 
-    # TODO(kangz) link the extensions and functions
+    for function in functions:
+        function.link(types)
+
+    interesting_extensions = [
+        extension_dict['vk_khr_surface'],
+        extension_dict['vk_khr_swapchain'],
+        extension_dict['vk_khr_display'],
+        extension_dict['vk_khr_display_swapchain'],
+        extension_dict['vk_ext_debug_report'],
+    ]
+    for extension in [main_api] + interesting_extensions:
+        extension.link(types, function_dict)
 
     return {
         'constants': constants,
@@ -627,9 +691,7 @@ def parse_vulkan_xml(filename):
 
 #TODO(kangz)
 # - Analyze
-#   - Link types
 #   - Order types (alphabetical sort + stable topo sort)
-#   - Gather requirements per extension
 # - Output
 #   - C++ type definitions
 #   - Functions loaders and C++ wrappers for
