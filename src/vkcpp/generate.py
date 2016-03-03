@@ -34,6 +34,7 @@ import jinja2
 import re
 import argparse
 import os
+import shutil
 from collections import namedtuple, OrderedDict
 
 #TODO(kangz) do not lower the extensions vendor name and somehow keep ASTC_4x4 instead of ASTC_4X4
@@ -116,6 +117,9 @@ class Name:
     def CamelCase(self):
         chunks = self.strip_vk(self.chunks)
         return ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks))
+
+    def SNAKE_CASE(self):
+        return '_'.join(map(lambda chunk: chunk.upper(), self.chunks))
 
     def EnumCase(self):
         result = self.CamelCase()
@@ -443,7 +447,7 @@ class Function:
 
 ExtensionEnumValue = namedtuple('ExtensionEnumValue', ['name', 'extends', 'value'])
 class Extension:
-    def __init__(self, element):
+    def __init__(self, element, main = False):
         # Extension (or "features") are defined as follows:
         #     <extension name="Foo" ...>
         #         <require>
@@ -452,11 +456,16 @@ class Extension:
         #             <enum offset='42' extends='foo' name='bar'/>
         #         </require>
         #     </extension>
+        self.is_main = main
         extension_number = 0
         if not 'api' in element.attrib:
             extension_number = int(element.attrib['number'], 0)
 
         self.name = Name(split_SNAKE_CASE(element.attrib['name']))
+        if self.is_main:
+            self.filename = 'Vulkan'
+        else:
+            self.filename = self.name.CamelCase()
 
         self.required_types = []
         self.required_functions = []
@@ -514,6 +523,9 @@ class Extension:
                 own_functions.update((function,))
                 add_types(function.required_types())
 
+        if self in required_extensions:
+            required_extensions.remove(self)
+
         #TODO(kangz) topo sort the types
         self.required_types = list(own_types)
         self.required_functions = sorted(list(own_functions), key = lambda function: function.name.canonical_case())
@@ -522,7 +534,7 @@ class Extension:
         self.required_headers = set([typ.header for typ in self.required_types if isinstance(typ, SystemType)])
         for extension in self.required_extensions:
             self.required_headers.difference_update(extension.required_headers)
-        self.required_headers = list(self.required_headers)
+        self.required_headers = sorted(list(self.required_headers))
 
 # A custom Jinja2 template loader that removes the extra indentation
 # of the template blocks so that the output is correctly indented
@@ -579,16 +591,8 @@ class PreprocessingLoader(jinja2.BaseLoader):
 
 def parse_vulkan_xml(filename):
     constants = []
-    enum_types = []
-    bitmask_types = []
-    system_types = []
-    base_types = []
-    handle_types = []
-    struct_types = []
-    fnptr_types = []
-
+    types = []
     functions = []
-
     main_api = None
     extensions = []
 
@@ -603,10 +607,10 @@ def parse_vulkan_xml(filename):
         elif enum.attrib['type'] == 'enum':
             # VkResult values are not namespaced in C Vulkan so we can't factor the enum name out
             factor = enum.attrib['name'] != 'VkResult'
-            enum_types.append(EnumType(enum, factor))
+            types.append(EnumType(enum, factor))
 
         elif enum.attrib['type'] == 'bitmask':
-            bitmask_types.append(BitmaskType(enum))
+            types.append(BitmaskType(enum))
 
     types_node = root.find('types')
     for typ in types_node:
@@ -614,41 +618,41 @@ def parse_vulkan_xml(filename):
             pass
 
         elif not 'category' in typ.attrib:
-            system_types.append(SystemType(typ))
+            types.append(SystemType(typ))
 
         elif typ.attrib['category'] == 'basetype':
-            base_types.append(BaseType(typ))
+            types.append(BaseType(typ))
 
         elif typ.attrib['category'] == 'handle':
-            handle_types.append(HandleType(typ))
+            types.append(HandleType(typ))
 
         elif typ.attrib['category'] == 'struct':
-            struct_types.append(StructType(typ, False))
+            types.append(StructType(typ, False))
 
         elif typ.attrib['category'] == 'union':
-            struct_types.append(StructType(typ, True))
+            types.append(StructType(typ, True))
 
         elif typ.attrib['category'] == 'funcpointer':
-            fnptr_types.append(FnptrType(typ))
+            types.append(FnptrType(typ))
 
         # Some empty bitmasks have a typedef but no enum definition
         elif typ.attrib['category'] == 'bitmask' and not 'require' in typ.attrib:
-            bitmask_types.append(BitmaskType(typ))
+            types.append(BitmaskType(typ))
 
     for element in root.find('commands'):
         assert(element.tag == 'command')
         functions.append(Function(element))
 
     assert(len(root.findall('feature')) == 1)
-    main_api = Extension(root.find('feature'))
+    main_api = Extension(root.find('feature'), main=True)
 
     for extension in root.find('extensions'):
         assert(extension.tag == 'extension')
-        extensions.append(Extension(extension))
+        extensions.append(Extension(extension, main=False))
 
-    types = {}
-    for typ in enum_types + bitmask_types + system_types + base_types + handle_types + struct_types + fnptr_types:
-        types[typ.name.canonical_case()] = typ
+    type_dict = {}
+    for typ in types:
+        type_dict[typ.name.canonical_case()] = typ
 
     function_dict = {}
     for function in functions:
@@ -658,50 +662,59 @@ def parse_vulkan_xml(filename):
     for extension in extensions:
         extension_dict[extension.name.canonical_case()] = extension
 
-    for typ in types.values():
-        typ.link(types)
+    for typ in types:
+        typ.link(type_dict)
 
     for function in functions:
-        function.link(types)
+        function.link(type_dict)
 
     interesting_extensions = [
+        main_api,
         extension_dict['vk_khr_surface'],
         extension_dict['vk_khr_swapchain'],
         extension_dict['vk_khr_display'],
         extension_dict['vk_khr_display_swapchain'],
         extension_dict['vk_ext_debug_report'],
     ]
-    for extension in [main_api] + interesting_extensions:
-        extension.link(types, function_dict)
+    for extension in interesting_extensions:
+        extension.link(type_dict, function_dict)
 
-    return {
-        'constants': constants,
-        'enum_types': enum_types,
-        'bitmask_types': bitmask_types,
-        'system_types': system_types,
-        'base_types': base_types,
-        'handle_types': handle_types,
-        'struct_types': struct_types,
-        'fnptr_types': fnptr_types,
-        'functions': functions,
-        'main_api': main_api,
-        'extensions': extensions,
-        'types': types,
-    }
+    return (types, constants, interesting_extensions)
 
 #TODO(kangz)
 # - Analyze
 #   - Order types (alphabetical sort + stable topo sort)
+#   - Inject extension enum values
 # - Output
 #   - C++ type definitions
 #   - Functions loaders and C++ wrappers for
 #     - Global functions
 #     - Instance functions
 #     - Device functions
-#     - static_assert file for types
+#   - static_assert file for types
 # - Stretch
-#   - Overload count and pointer return values by std::vector
+#   - Overload count and pointer return values with std::vector
 #   - Do not require any patching of vk.xml
+
+def extension_template_args(types, constants, extension):
+    params = {
+        'extension': extension,
+        'system_types': list(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
+        'handle_types': list(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
+        'struct_types': list(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
+        'fnptr_types': list(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
+        'functions': extension.required_functions,
+        'required_extensions': extension.required_extensions,
+        'required_headers': extension.required_headers,
+    }
+
+    if extension.is_main:
+        params['base_types'] = list(filter(lambda typ: isinstance(typ, BaseType), types))
+        params['bitmask_types'] = list(filter(lambda typ: isinstance(typ, BitmaskType), types))
+        params['enum_types'] = list(filter(lambda typ: isinstance(typ, EnumType), types))
+        params['constants'] = constants
+
+    return params
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -710,14 +723,14 @@ if __name__ == '__main__':
     )
     parser.add_argument('xml', metavar='VULKAN_XML', nargs=1, type=open, help ='The Vulkan XML definition to use.')
     parser.add_argument('-t', '--template-dir', default="templates", type=str, help='Directory with template files.')
+    parser.add_argument('-s', '--source-dir', default="sources", type=str, help='Directory with source files.')
     parser.add_argument('-o', '--output-dir', default=None, type=str, help='Output directory for the generated source files.')
 
     args = parser.parse_args()
 
-    vulkan = parse_vulkan_xml(args.xml[0])
+    (types, constants, extensions) = parse_vulkan_xml(args.xml[0])
     args.xml[0].close()
 
-    env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
 
     if args.output_dir != None:
         # Generate a list of files to create, params_dicts will get squashed to create the template parameters
@@ -726,8 +739,14 @@ if __name__ == '__main__':
 
         base_dir = args.output_dir + os.path.sep
 
-        to_render.append(FileToRender('Vulkan.h', base_dir + 'Vulkan.h', [vulkan]))
+        for extension in extensions:
+            params = [extension_template_args(types, constants, extension)]
+            template_prefix = ''
+            if extension.is_main:
+                template_prefix = 'Main'
+            to_render.append(FileToRender(template_prefix + 'Extension.h', base_dir + extension.filename + '.h', params))
 
+        env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
         for render in to_render:
             params = OrderedDict()
             for param_dict in render.params_dicts:
@@ -740,3 +759,7 @@ if __name__ == '__main__':
 
             with open(render.output, 'w') as outfile:
                 outfile.write(content)
+
+        # Copy over some non-templated files
+        for name in ['vk_platform.h']:
+            shutil.copyfile(args.source_dir + os.path.sep + name, base_dir + name)
