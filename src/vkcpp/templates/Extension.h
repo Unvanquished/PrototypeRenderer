@@ -48,12 +48,15 @@
 
 namespace vk {
 
-    {% block extra_base_types %}{% endblock %}
+    {% for type in base_types %}
+        using {{type.name.Typename()}} = {{type.base_type.name.Typename()}};
+    {% endfor %}
+
+    {% block extra_base_definitions %}{% endblock %}
     //* TODO(kangz) handle_types
     //* TODO(kangz) struct_types
     //* TODO(kangz) fnptr_types
     //* TODO(kangz) commands
-
 }
 
 #endif // VKCPP_{{extension.name.SNAKE_CASE()}}_H_

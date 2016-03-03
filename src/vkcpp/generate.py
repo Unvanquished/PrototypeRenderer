@@ -97,6 +97,9 @@ class Name:
     def __init__(self, chunks):
         self.chunks = chunks
 
+    def is_vk(self):
+        return self.chunks[0] in ('PFN_vk', 'vk')
+
     def strip_vk(self, chunks):
         if chunks[0] in ('PFN_vk', 'vk'):
             return list(chunks[1:])
@@ -110,6 +113,9 @@ class Name:
     def canonical_case(self):
         return '_'.join(self.chunks)
 
+    def concatcase(self):
+        return ''.join(self.chunks)
+
     def camelCase(self):
         chunks = self.strip_vk(self.chunks)
         return ''.join(chunks[0] + map(lambda chunk: self.CamelChunk(chunk), chunks[1:]))
@@ -120,6 +126,12 @@ class Name:
 
     def SNAKE_CASE(self):
         return '_'.join(map(lambda chunk: chunk.upper(), self.chunks))
+
+    def Typename(self):
+        if self.is_vk():
+            return self.CamelCase()
+        else:
+            return self.concatcase()
 
     def EnumCase(self):
         result = self.CamelCase()
@@ -296,14 +308,20 @@ class BitmaskType(Type):
 
         for child in element:
             name = split_SNAKE_CASE(child.attrib['name'])
-            name = Name(factor_name(name, self.name.chunks))
 
             # Some bitmask use values which are not exact bits in order to have preset
             # combinations, such as cull mode front and back (which is 0b01 | 0b10 == 0b11)
             if 'value' in child.attrib:
+                name = Name(factor_name(name, self.name.chunks))
                 self.values.append(BitmaskValue(name, int(child.attrib['value'], 0)))
             else:
                 assert('bitpos' in child.attrib)
+                assert(name[-1] == 'bit' or name[-2] == 'bit')
+                if name[-1] == 'bit':
+                    name = Name(factor_name(name[:-1], self.name.chunks))
+                else:
+                    name = Name(factor_name(name[:-2] + name[-1:], self.name.chunks))
+
                 self.bits.append(BitmaskBit(name, int(child.attrib['bitpos'], 0)))
 
         self.values.sort(key=lambda value: value.value)
@@ -333,6 +351,9 @@ class BaseType(Type):
         #     <type category="basetype">typedef <type>system</type> <name>base</name>;</type>
         self.name = Name(split_CamelCase(element.find('name').text))
         self.base_type = element.find('type').text
+
+    def link(self, types):
+        self.base_type = types[self.base_type]
 
 class HandleType(Type):
     def __init__(self, element):
@@ -576,8 +597,8 @@ class PreprocessingLoader(jinja2.BaseLoader):
                 line = line[1:]
         return line
 
-    blockstart = re.compile('^\s*{%-?\s*(if|for).*$')
-    blockend = re.compile('^\s*{%-?\s*end(if|for).*$')
+    blockstart = re.compile('^\s*{%-?\s*(if|for|block).*$')
+    blockend = re.compile('^\s*{%-?\s*end(if|for|block).*$')
 
     def my_filter(self, text):
         lines = []
@@ -598,6 +619,7 @@ def parse_vulkan_xml(filename):
 
     root = xml.etree.ElementTree.parse(filename).getroot()
 
+    found_bitmask_names = set()
     for enum in root.iter('enums'):
         # Some random constants are defined inside an enum, skip them.
         if enum.attrib['name'] == 'API Constants':
@@ -610,7 +632,9 @@ def parse_vulkan_xml(filename):
             types.append(EnumType(enum, factor))
 
         elif enum.attrib['type'] == 'bitmask':
-            types.append(BitmaskType(enum))
+            bitmask = BitmaskType(enum)
+            types.append(bitmask)
+            found_bitmask_names.update((bitmask.name.canonical_case(),))
 
     types_node = root.find('types')
     for typ in types_node:
@@ -637,7 +661,9 @@ def parse_vulkan_xml(filename):
 
         # Some empty bitmasks have a typedef but no enum definition
         elif typ.attrib['category'] == 'bitmask' and not 'require' in typ.attrib:
-            types.append(BitmaskType(typ))
+            bitmask = BitmaskType(typ)
+            if not bitmask.name.canonical_case() in found_bitmask_names:
+                types.append(BitmaskType(typ))
 
     for element in root.find('commands'):
         assert(element.tag == 'command')
@@ -700,6 +726,7 @@ def extension_template_args(types, constants, extension):
     params = {
         'extension': extension,
         'system_types': list(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
+        'base_types': list(filter(lambda typ: isinstance(typ, BaseType), extension.required_types)),
         'handle_types': list(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
         'struct_types': list(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
         'fnptr_types': list(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
@@ -709,7 +736,6 @@ def extension_template_args(types, constants, extension):
     }
 
     if extension.is_main:
-        params['base_types'] = list(filter(lambda typ: isinstance(typ, BaseType), types))
         params['bitmask_types'] = list(filter(lambda typ: isinstance(typ, BitmaskType), types))
         params['enum_types'] = list(filter(lambda typ: isinstance(typ, EnumType), types))
         params['constants'] = constants
@@ -761,5 +787,5 @@ if __name__ == '__main__':
                 outfile.write(content)
 
         # Copy over some non-templated files
-        for name in ['vk_platform.h']:
+        for name in ['vk_platform.h', 'EnumClassBitmasks.h']:
             shutil.copyfile(args.source_dir + os.path.sep + name, base_dir + name)

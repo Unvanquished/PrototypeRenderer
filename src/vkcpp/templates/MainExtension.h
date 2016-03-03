@@ -28,17 +28,44 @@
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 {% extends 'Extension.h' %}
 
-{% block extra_base_types %}
-    {% for enum in enum_types %}
-        //* TODO make in on int32_t
-        enum class {{enum.name.CamelCase()}}: int32_t {
-            {% for value in enum.values %}
-                {{value.name.EnumCase()}} = {{value.value}},
-            {% endfor %}
-        };
-
-    {% endfor %}
-    //* TODO bitmask types
-    //* TODO base types
-    //* TODO constants
+{% block extra_headers %}
+    #include "EnumClassBitmasks.h"
 {% endblock %}
+
+//* namespace vk {
+
+    {% block extra_base_definitions %}
+        {% for constant in constants %}
+            constexpr auto {{constant.name.CamelCase()}} = {{constant.value}};
+        {% endfor %}
+
+        {% for enum in enum_types %}
+            enum class {{enum.name.Typename()}}: int32_t {
+                {% for value in enum.values %}
+                    {{value.name.EnumCase()}} = {{value.value}},
+                {% endfor %}
+            };
+
+        {% endfor %}
+
+        {% for bitmask in bitmask_types %}
+            enum class {{bitmask.name.Typename()}}: int32_t {
+                {% for bit in bitmask.bits %}
+                    {{bit.name.EnumCase()}} = 1 << {{bit.bit}},
+                {% endfor %}
+                {% for value in bitmask.values %}
+                    {{value.name.EnumCase()}} = {{value.value}},
+                {% endfor %}
+            };
+
+        {% endfor %}
+        {% for bitmask in bitmask_types %}
+            template<>
+            struct IsVkBitmask<{{bitmask.name.Typename()}}> {
+                static constexpr bool enable = true;
+            };
+
+        {% endfor %}
+    {% endblock %}
+
+//* }
