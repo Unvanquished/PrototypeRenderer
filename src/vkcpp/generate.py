@@ -253,6 +253,9 @@ class Type:
     def required_types(self):
         return []
 
+    def finalize(self):
+        pass
+
 EnumValue = namedtuple('EnumValue', ['name', 'value'])
 class EnumType(Type):
     def __init__(self, element, factor):
@@ -263,6 +266,7 @@ class EnumType(Type):
         #     </enums>
         self.name = Name(split_CamelCase(element.attrib['name']))
         self.values = []
+        self.factor = factor
 
         for child in element:
             # VkResult has got an <unused/> child, skip it
@@ -277,7 +281,18 @@ class EnumType(Type):
                 name = Name(name)
             self.values.append(EnumValue(name, int(child.attrib['value'], 0)))
 
-        self.values.sort(key=lambda value: value.value)
+    def add_value(self, name, value):
+        if self.factor:
+            name = Name(factor_name(name.chunks, self.name.chunks))
+        self.values.append(EnumValue(name, value))
+
+    def finalize(self):
+        def key_for_value(value):
+            if value < 0:
+                return (1, value)
+            else:
+                return (0, value)
+        self.values.sort(key=key_for_value)
 
 BitmaskBit = namedtuple('BitmaskBit', ['name', 'bit'])
 BitmaskValue = namedtuple('BitmaskValue', ['name', 'value'])
@@ -334,6 +349,10 @@ class BitmaskType(Type):
             self.name.chunks = self.name.chunks[-1:] + ['flags'] + self.name.chunks[:-1]
         else:
             self.name.chunks.append('flags')
+
+    def finalize(self):
+        self.values.sort(key=lambda value: value.value)
+        self.bits.sort(key=lambda bit: bit.bit)
 
 class SystemType(Type):
     def __init__(self, element):
@@ -557,6 +576,9 @@ class Extension:
             self.required_headers.difference_update(extension.required_headers)
         self.required_headers = sorted(list(self.required_headers))
 
+        for value in self.enum_values:
+            types[value.extends.canonical_case()].add_value(value.name, value.value)
+
 # A custom Jinja2 template loader that removes the extra indentation
 # of the template blocks so that the output is correctly indented
 class PreprocessingLoader(jinja2.BaseLoader):
@@ -705,11 +727,14 @@ def parse_vulkan_xml(filename):
     for extension in interesting_extensions:
         extension.link(type_dict, function_dict)
 
+    for typ in types:
+        typ.finalize()
+
     return (types, constants, interesting_extensions)
 
 #TODO(kangz)
 # - Analyze
-#   - Order types (alphabetical sort + stable topo sort)
+#   - Order struct types (alphabetical sort + stable topo sort)
 #   - Inject extension enum values
 # - Output
 #   - C++ type definitions
@@ -723,22 +748,25 @@ def parse_vulkan_xml(filename):
 #   - Do not require any patching of vk.xml
 
 def extension_template_args(types, constants, extension):
+    def sort_by_name(things):
+        return sorted(things, key=lambda thing: thing.name.canonical_case())
+
     params = {
         'extension': extension,
-        'system_types': list(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
-        'base_types': list(filter(lambda typ: isinstance(typ, BaseType), extension.required_types)),
-        'handle_types': list(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
+        'system_types': sort_by_name(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
+        'base_types': sort_by_name(filter(lambda typ: isinstance(typ, BaseType), extension.required_types)),
+        'handle_types': sort_by_name(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
         'struct_types': list(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
-        'fnptr_types': list(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
-        'functions': extension.required_functions,
-        'required_extensions': extension.required_extensions,
-        'required_headers': extension.required_headers,
+        'fnptr_types': sort_by_name(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
+        'functions': sort_by_name(extension.required_functions),
+        'required_extensions': sort_by_name(extension.required_extensions),
+        'required_headers': sorted(extension.required_headers),
     }
 
     if extension.is_main:
-        params['bitmask_types'] = list(filter(lambda typ: isinstance(typ, BitmaskType), types))
-        params['enum_types'] = list(filter(lambda typ: isinstance(typ, EnumType), types))
-        params['constants'] = constants
+        params['bitmask_types'] = sort_by_name(filter(lambda typ: isinstance(typ, BitmaskType), types))
+        params['enum_types'] = sort_by_name(filter(lambda typ: isinstance(typ, EnumType), types))
+        params['constants'] = sort_by_name(constants)
 
     return params
 
