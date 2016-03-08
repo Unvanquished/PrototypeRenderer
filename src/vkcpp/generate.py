@@ -118,7 +118,7 @@ class Name:
 
     def camelCase(self):
         chunks = self.strip_vk(self.chunks)
-        return ''.join(chunks[0] + map(lambda chunk: self.CamelChunk(chunk), chunks[1:]))
+        return chunks[0] + ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks[1:]))
 
     def CamelCase(self):
         chunks = self.strip_vk(self.chunks)
@@ -175,7 +175,7 @@ class AnnotatedTypeAndName:
 
         def make_constant_array():
             self.annotation = '[]'
-            self.constant_count = split_SNAKE_CASE(element.find('enum').text)
+            self.constant_count = Name(split_SNAKE_CASE(element.find('enum').text))
 
         def make_integral_array(count, const):
             self.annotation = 'const[]' if const else '[]'

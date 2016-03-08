@@ -26,47 +26,33 @@
 //* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// THIS FILE IS AUTO-GENERATED, EDIT AT YOUR OWN RISK
-{% import 'TemplateUtils.h' as utils %}
 
-#ifndef VKCPP_{{extension.name.SNAKE_CASE()}}_H_
-#define VKCPP_{{extension.name.SNAKE_CASE()}}_H_
-
-{% for extension in required_extensions %}
-    #include "{{extension.filename}}.h"
-{% endfor %}
-
-{% block extra_headers %}
-{% endblock %}
-
-{% for header in required_headers %}
-    {% if header in ['vk_platform.h'] %}
-        #include "{{header}}"
+{% macro annotated_type(annotated) %}
+    {% if annotated.annotation == '*' %}
+        {{annotated.typ.name.Typename()}}*
+    {% elif annotated.annotation == '**' %}
+        {{annotated.typ.name.Typename()}}**
+    {% elif annotated.annotation == 'const*'%}
+        const {{annotated.typ.name.Typename()}}*
+    {% elif annotated.annotation == 'const*const*'%}
+        const {{annotated.typ.name.Typename()}}* const*
+    {% elif annotated.annotation == 'struct*' %}
+        struct {{annotated.typ.name.Typename()}}*
+    {% elif annotated.annotation == 'const[]' %}
+        const {{annotated.typ.name.Typename()}}
     {% else %}
-        #include <{{header}}>
+        {{annotated.typ.name.Typename()}}
     {% endif %}
-{% endfor %}
+{% endmacro %}
 
-namespace vk {
-
-    {% for type in base_types %}
-        using {{type.name.Typename()}} = {{type.base_type.name.Typename()}};
-    {% endfor %}
-
-    {% block extra_base_definitions %}{% endblock %}
-    //* TODO(kangz) handle_types
-
-    {% for type in struct_types %}
-        {% if type.is_union %} union {% else %} struct {% endif %} {{type.name.Typename()}} {
-            {% for member in type.members %}
-                {{utils.annotated_type(member)}} {{utils.annotated_name(member)}};
-            {% endfor %}
-        }
-    {% endfor %}
-
-    //* TODO(kangz) struct_types
-    //* TODO(kangz) fnptr_types
-    //* TODO(kangz) commands
-}
-
-#endif // VKCPP_{{extension.name.SNAKE_CASE()}}_H_
+{% macro annotated_name(annotated) %}
+    {% if annotated.annotation in ['[]', 'const[]'] %}
+        {% if annotated.integral_count == 0 %}
+            {{annotated.name.camelCase()}}[{{annotated.constant_count.SNAKE_CASE()}}]
+        {% else %}
+            {{annotated.name.camelCase()}}[{{annotated.integral_count}}]
+        {% endif %}
+    {% else %}
+        {{annotated.name.camelCase()}}
+    {% endif %}
+{% endmacro %}
