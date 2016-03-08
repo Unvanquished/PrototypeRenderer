@@ -740,6 +740,8 @@ def parse_vulkan_xml(filename):
 #     - Instance functions
 #     - Device functions
 #   - static_assert file for types
+#   - defaults for sType and pNext
+#   - bitmasks convertible to bool
 # - Stretch
 #   - Overload count and pointer return values with std::vector
 #   - Do not require any patching of vk.xml

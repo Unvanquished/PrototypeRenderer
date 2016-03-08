@@ -53,19 +53,33 @@ namespace vk {
         using {{type.name.Typename()}} = {{type.base_type.name.Typename()}};
     {% endfor %}
 
-    {% block extra_base_definitions %}{% endblock %}
+    {% block extra_base_definitions %}
+    {% endblock %}
     //* TODO(kangz) handle_types
 
+    {% for type in fnptr_types %}
+        using {{type.name.Typename()}} = {{type.return_type.name.Typename()}} (VK_APIPTR*) (
+            {%- call(param) utils.comma_foreach(type.params) -%}
+                {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
+            {%- endcall -%}
+        );
+
+    {% endfor %}
+
     {% for type in struct_types %}
-        {% if type.is_union %} union {% else %} struct {% endif %} {{type.name.Typename()}} {
+        {% if type.is_union %}
+            union
+        {%- else %}
+            struct
+        {%- endif -%}
+        {{' '}}{{type.name.Typename()}} {
             {% for member in type.members %}
                 {{utils.annotated_type(member)}} {{utils.annotated_name(member)}};
             {% endfor %}
-        }
+        };
+
     {% endfor %}
 
-    //* TODO(kangz) struct_types
-    //* TODO(kangz) fnptr_types
     //* TODO(kangz) commands
 }
 

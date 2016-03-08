@@ -28,31 +28,40 @@
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 {% macro annotated_type(annotated) %}
-    {% if annotated.annotation == '*' %}
+    {%- if annotated.annotation == '*' -%}
         {{annotated.typ.name.Typename()}}*
-    {% elif annotated.annotation == '**' %}
+    {%- elif annotated.annotation == '**' -%}
         {{annotated.typ.name.Typename()}}**
-    {% elif annotated.annotation == 'const*'%}
+    {%- elif annotated.annotation == 'const*' -%}
         const {{annotated.typ.name.Typename()}}*
-    {% elif annotated.annotation == 'const*const*'%}
+    {%- elif annotated.annotation == 'const*const*' -%}
         const {{annotated.typ.name.Typename()}}* const*
-    {% elif annotated.annotation == 'struct*' %}
+    {%- elif annotated.annotation == 'struct*' -%}
         struct {{annotated.typ.name.Typename()}}*
-    {% elif annotated.annotation == 'const[]' %}
+    {%- elif annotated.annotation == 'const[]' -%}
         const {{annotated.typ.name.Typename()}}
-    {% else %}
+    {%- else -%}
         {{annotated.typ.name.Typename()}}
-    {% endif %}
+    {%- endif %}
 {% endmacro %}
 
 {% macro annotated_name(annotated) %}
     {% if annotated.annotation in ['[]', 'const[]'] %}
-        {% if annotated.integral_count == 0 %}
+        {% if annotated.integral_count == 0 -%}
             {{annotated.name.camelCase()}}[{{annotated.constant_count.SNAKE_CASE()}}]
-        {% else %}
+        {%- else -%}
             {{annotated.name.camelCase()}}[{{annotated.integral_count}}]
-        {% endif %}
-    {% else %}
+        {%- endif %}
+    {%- else -%}
         {{annotated.name.camelCase()}}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
+
+{% macro comma_foreach(list) -%}
+    {%- for element in list -%}
+        {%- if not loop.first -%}
+            ,{{' '}}
+        {%- endif -%}
+        {{caller(element)}}
+    {%- endfor -%}
+{%- endmacro %}
