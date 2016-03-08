@@ -733,9 +733,6 @@ def parse_vulkan_xml(filename):
     return (types, constants, interesting_extensions)
 
 #TODO(kangz)
-# - Analyze
-#   - Order struct types (alphabetical sort + stable topo sort)
-#   - Inject extension enum values
 # - Output
 #   - C++ type definitions
 #   - Functions loaders and C++ wrappers for
@@ -751,12 +748,46 @@ def extension_template_args(types, constants, extension):
     def sort_by_name(things):
         return sorted(things, key=lambda thing: thing.name.canonical_case())
 
+    # Some Vulkan structures depend oni the definition of other structure so we
+    # need to make sure the definitions being depended on come first. Also we want
+    # the structure to be in alphabetical order as much as possible.
+    # Ideally we would have a stable topological sort do that for us, but such sorts
+    # are very complex (but if you know of one, please change this implementation).
+    # Instead we output the types with 0 dependencies, sorted, then update the
+    # dependencies and start over again. It is a good and easy approximation.
+    # Worst case complexity is, O(depth * nTypes * meanRequiredTypes) plus the alphabetical
+    # sort but in practice depth and meanRequiredTypes are small.
+    def sort_types(to_sort):
+        sorted_types = []
+
+        to_sort_dict = {}
+        for typ in to_sort:
+            to_sort_dict[typ.name.canonical_case()] = typ
+
+        while len(to_sort_dict) != 0:
+            types_to_add = []
+            for typ in to_sort_dict.values():
+                can_add = True
+                for required in typ.required_types():
+                    if required.name.canonical_case() in to_sort_dict:
+                        can_add = False
+                        break
+                if can_add:
+                    types_to_add.append(typ)
+
+            for typ in types_to_add:
+                del to_sort_dict[typ.name.canonical_case()]
+
+            sorted_types += sort_by_name(types_to_add)
+
+        return sorted_types
+
     params = {
         'extension': extension,
         'system_types': sort_by_name(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
         'base_types': sort_by_name(filter(lambda typ: isinstance(typ, BaseType), extension.required_types)),
         'handle_types': sort_by_name(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
-        'struct_types': list(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
+        'struct_types': sort_types(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
         'fnptr_types': sort_by_name(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
         'functions': sort_by_name(extension.required_functions),
         'required_extensions': sort_by_name(extension.required_extensions),
