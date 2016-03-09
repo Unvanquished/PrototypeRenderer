@@ -795,6 +795,8 @@ def extension_template_args(types, constants, extension):
         'extension': extension,
         'system_types': sort_by_name(filter(lambda typ: isinstance(typ, SystemType), extension.required_types)),
         'base_types': sort_by_name(filter(lambda typ: isinstance(typ, BaseType), extension.required_types)),
+        'bitmask_types': sort_by_name(filter(lambda typ: isinstance(typ, BitmaskType), extension.required_types)),
+        'enum_types': sort_by_name(filter(lambda typ: isinstance(typ, EnumType), extension.required_types)),
         'handle_types': sort_by_name(filter(lambda typ: isinstance(typ, HandleType), extension.required_types)),
         'struct_types': sort_types(filter(lambda typ: isinstance(typ, StructType), extension.required_types)),
         'fnptr_types': sort_by_name(filter(lambda typ: isinstance(typ, FnptrType), extension.required_types)),
@@ -804,8 +806,6 @@ def extension_template_args(types, constants, extension):
     }
 
     if extension.is_main:
-        params['bitmask_types'] = sort_by_name(filter(lambda typ: isinstance(typ, BitmaskType), types))
-        params['enum_types'] = sort_by_name(filter(lambda typ: isinstance(typ, EnumType), types))
         params['constants'] = sort_by_name(constants)
 
     return params
