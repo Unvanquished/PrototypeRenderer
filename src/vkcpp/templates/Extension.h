@@ -55,10 +55,20 @@ namespace vk {
 
     {% block extra_base_definitions %}
     {% endblock %}
-    //* TODO(kangz) handle_types
+
+    {% for typ in handle_types %}
+        {% if typ.dispatchable %}
+            using {{typ.name.Typename()}} = class {{typ.name.Typename()}}Impl*;
+        {% else %}
+            class {{typ.name.Typename()}} : public NonDispatchableHandle {
+                using NonDispatchableHandle::NonDispatchableHandle;
+            };
+        {% endif %}
+
+    {% endfor %}
 
     {% for type in fnptr_types %}
-        using {{type.name.Typename()}} = {{type.return_type.name.Typename()}} (VK_APIPTR*) (
+        using {{type.name.Typename()}} = {{type.return_type.name.Typename()}} (VKAPI_PTR*) (
             {%- call(param) utils.comma_foreach(type.params) -%}
                 {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
             {%- endcall -%}

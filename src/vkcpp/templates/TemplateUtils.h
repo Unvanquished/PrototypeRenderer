@@ -48,7 +48,7 @@
 {% macro annotated_name(annotated) %}
     {% if annotated.annotation in ['[]', 'const[]'] %}
         {% if annotated.integral_count == 0 -%}
-            {{annotated.name.camelCase()}}[{{annotated.constant_count.SNAKE_CASE()}}]
+            {{annotated.name.camelCase()}}[{{annotated.constant_count.CamelCase()}}]
         {%- else -%}
             {{annotated.name.camelCase()}}[{{annotated.integral_count}}]
         {%- endif %}

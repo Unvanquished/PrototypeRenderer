@@ -66,6 +66,15 @@
             };
 
         {% endfor %}
+
+        class NonDispatchableHandle {
+            public:
+                NonDispatchableHandle() : handle(0) {}
+                NonDispatchableHandle(std::nullptr_t) : handle(0) {}
+                uint64_t GetHandle() const {return handle;}
+            private:
+                uint64_t handle;
+        };
     {% endblock %}
 
 //* }
