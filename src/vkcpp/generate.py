@@ -74,28 +74,32 @@ def split_Typename(name):
 # of the enum type name. With scoped enums we don't want this so we factor out the type name
 # from the value name.
 def factor_name(name, factorand):
-    assert(len(name) > len(factorand))
-    # When factoring we need to take care of the vendor suffixes that can be present, which means
-    # we need to factor both in the start and the end of the name.
-    first_difference = 0
-    for i in range(len(factorand)):
-        if name[i] != factorand[i]:
-            first_difference = i
-            break
-        first_difference = i + 1
-
-    rest = factorand[first_difference:]
-    if len(rest) == 0:
-        return name[first_difference:]
+    if factorand.vendor == '':
+        assert(len(name) > len(factorand.chunks))
     else:
-        #TODO check that rest is a vendor suffix.
-        assert(len(rest) == 1) # Vendor suffixes are always one word
-        assert(rest == name[-len(rest):])
-        return name[first_difference:-len(rest)]
+        assert(len(name) > len(factorand.chunks) + 1)
+        assert(name[-1].upper() == factorand.vendor)
+        name = name[:-1]
+
+    for i in range(len(factorand.chunks)):
+        assert(name[i] == factorand.chunks[i])
+
+    rest = name[len(factorand.chunks):]
+
+    if factorand.vendor == '':
+        return Name(rest)
+    else:
+        return Name(rest + [factorand.vendor])
 
 class Name:
     def __init__(self, chunks):
-        self.chunks = chunks
+        # TODO(kangz) gather the extension suffixes from the XML file instead
+        if chunks[-1].upper() in ('KHR', 'EXT'):
+            self.chunks = chunks[:-1]
+            self.vendor = chunks[-1].upper()
+        else:
+            self.chunks = chunks
+            self.vendor = ''
 
     def is_vk(self):
         return self.chunks[0] in ('PFN_vk', 'vk')
@@ -111,21 +115,26 @@ class Name:
         return chunk[0].upper() + chunk[1:]
 
     def canonical_case(self):
-        return '_'.join(self.chunks)
+        return '_'.join(self.chunks) + self.vendor
 
     def concatcase(self):
-        return ''.join(self.chunks)
+        return ''.join(self.chunks) + self.vendor
 
     def camelCase(self):
         chunks = self.strip_vk(self.chunks)
-        return chunks[0] + ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks[1:]))
+        return chunks[0] + ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks[1:])) + self.vendor
 
     def CamelCase(self):
         chunks = self.strip_vk(self.chunks)
-        return ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks))
+        return ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks)) + self.vendor
 
     def SNAKE_CASE(self):
-        return '_'.join(map(lambda chunk: chunk.upper(), self.chunks))
+        chunks = self.strip_vk(self.chunks)
+        return '_'.join(map(lambda chunk: chunk.upper(), chunks)) + self.vendor
+
+    def snake_case(self):
+        chunks = self.strip_vk(self.chunks)
+        return '_'.join(map(lambda chunk: chunk.lower(), chunks)) + self.vendor
 
     def Typename(self):
         if self.is_vk():
@@ -276,14 +285,14 @@ class EnumType(Type):
 
             name = split_SNAKE_CASE(child.attrib['name'])
             if factor:
-                name = Name(factor_name(name, self.name.chunks))
+                name = factor_name(name, self.name)
             else:
                 name = Name(name)
             self.values.append(EnumValue(name, int(child.attrib['value'], 0)))
 
     def add_value(self, name, value):
         if self.factor:
-            name = Name(factor_name(name.chunks, self.name.chunks))
+            name = factor_name(name.chunks, self.name)
         self.values.append(EnumValue(name, value))
 
     def finalize(self):
@@ -327,15 +336,15 @@ class BitmaskType(Type):
             # Some bitmask use values which are not exact bits in order to have preset
             # combinations, such as cull mode front and back (which is 0b01 | 0b10 == 0b11)
             if 'value' in child.attrib:
-                name = Name(factor_name(name, self.name.chunks))
+                name = factor_name(name, self.name)
                 self.values.append(BitmaskValue(name, int(child.attrib['value'], 0)))
             else:
                 assert('bitpos' in child.attrib)
                 assert(name[-1] == 'bit' or name[-2] == 'bit')
                 if name[-1] == 'bit':
-                    name = Name(factor_name(name[:-1], self.name.chunks))
+                    name = factor_name(name[:-1], self.name)
                 else:
-                    name = Name(factor_name(name[:-2] + name[-1:], self.name.chunks))
+                    name = factor_name(name[:-2] + name[-1:], self.name)
 
                 self.bits.append(BitmaskBit(name, int(child.attrib['bitpos'], 0)))
 
@@ -345,10 +354,7 @@ class BitmaskType(Type):
         #     <type requires="VkFooFlagBits" category="bitmask">typdef<type>VkFlags</type><name>VkFooFlags</name></type>
         #     The Bitmask definition as VkFooFlagBits
         # Others parts of the definition refer to this type as VkFooFlags so we need to add "Flags" to the name
-        if has_extension:
-            self.name.chunks = self.name.chunks[-1:] + ['flags'] + self.name.chunks[:-1]
-        else:
-            self.name.chunks.append('flags')
+        self.name.chunks.append('flags')
 
     def finalize(self):
         self.values.sort(key=lambda value: value.value)
@@ -745,6 +751,7 @@ def parse_vulkan_xml(filename):
 # - Stretch
 #   - Overload count and pointer return values with std::vector
 #   - Do not require any patching of vk.xml
+#   - Handle extensions with a protect attribute
 
 def extension_template_args(types, constants, extension):
     def sort_by_name(things):
