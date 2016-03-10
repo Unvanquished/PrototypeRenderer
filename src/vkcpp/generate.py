@@ -43,21 +43,26 @@ from collections import namedtuple, OrderedDict
 # other name formatting is possible. For example in vulkan.h enum values are in SNAKE_CASE
 # but in the generated code we want them to be in CamelCase.
 
-def split_camelCase(name):
-    assert(len(name) > 0 and name[0].islower())
+def lower_if_mixed(chunk):
+    if not chunk[1:].islower():
+        return chunk[:]
+    else:
+        return chunk.lower()
+
+def split_camelCase(name, is_Camel=False):
+    assert(len(name) > 0 and (is_Camel or name[0].islower()))
     split = []
     start = 0
     for (i, char) in enumerate(name):
-        if char.isupper() and (i == 0 or not name[i - 1].isupper()):
-            split.append(name[start:i].lower())
+        if i !=0 and char.isupper() and (i == 0 or not name[i - 1].isupper()):
+            split.append(lower_if_mixed(name[start:i]))
             start = i
-    split.append(name[start:].lower())
+    split.append(lower_if_mixed(name[start:]))
     return split
 
 def split_CamelCase(name):
     assert(len(name) > 0 and name[0].isupper())
-    name = name[0].lower() + name[1:]
-    return split_camelCase(name)
+    return split_camelCase(name, is_Camel=True)
 
 def split_SNAKE_CASE(name):
     # Can't assert on this because of ASTC_4x4

@@ -32,6 +32,7 @@
 #include "vulkan/vulkan.h"
 
 #include <type_traits>
+#include <cstddef>
 
 using namespace vk;
 
@@ -56,5 +57,14 @@ struct Compatible {
     static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
 {% endfor %}
 
-//* TODO check for fnptr types once their name is fixed.
-//* TODO check structs and their members
+{% for typ in fnptr_types %}
+    static_assert(Compatible<{{typ.name.Typename()}}, ::PFN_vk{{typ.name.Typename()}}>::value, "");
+{% endfor %}
+
+{% for typ in struct_types %}
+    static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
+    {% for member in typ.members %}
+        static_assert(offsetof({{typ.name.Typename()}}, {{member.name.camelCase()}}) == offsetof(::Vk{{typ.name.Typename()}}, {{member.name.camelCase()}}), "");
+    {% endfor %}
+
+{% endfor %}
