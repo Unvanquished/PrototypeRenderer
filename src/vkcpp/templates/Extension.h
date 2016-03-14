@@ -117,7 +117,25 @@ namespace vk {
 
     {% endfor %}
 
-    //* TODO(kangz) commands
+    {% set ClassName = extension.name.CamelCase() + 'Loader' %}
+    class {{ClassName}} {
+        public:
+            {{ClassName}}();
+
+            {% for function in functions %}
+                {{function.return_type.name.Typename()}} {{function.name.camelCase()}}(
+                    {%- call(param) utils.comma_foreach(function.params) -%}
+                        {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
+                    {%- endcall -%}
+                );
+            {% endfor %}
+
+        private:
+            using UntypedFnptr = void (*)();
+            {% for function in functions %}
+                UntypedFnptr {{function.name.camelCase()}}_ = nullptr;
+            {% endfor %}
+    };
 }
 
 #endif // VKCPP_{{extension.name.SNAKE_CASE()}}_H_

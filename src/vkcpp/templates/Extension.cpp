@@ -26,51 +26,43 @@
 //* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS FILE IS AUTO-GENERATED, EDIT AT YOUR OWN RISK
+{% import 'TemplateUtils.h' as utils %}
 
-{% macro annotated_type(annotated, native=False, array_to_pointer=False) %}
-    {%- if native -%}
-        {%- set typename = annotated.typ.name.nativeTypename() -%}
-    {%- else -%}
-        {%- set typename = annotated.typ.name.Typename() -%}
-    {%- endif -%}
-    {%- if annotated.annotation == '*' -%}
-        {{typename}}*
-    {%- elif annotated.annotation == '**' -%}
-        {{typename}}**
-    {%- elif annotated.annotation == 'const*' -%}
-        const {{typename}}*
-    {%- elif annotated.annotation == 'const*const*' -%}
-        const {{typename}}* const*
-    {%- elif annotated.annotation == 'struct*' -%}
-        struct {{typename}}*
-    {%- elif annotated.annotation == 'const[]' -%}
-        {%- if array_to_pointer -%}
-            const {{typename}}*
-        {%- else -%}
-            const {{typename}}
-        {%- endif -%}
-    {%- else -%}
-        {{typename}}
-    {%- endif %}
-{% endmacro %}
+#include "{{extension.filename}}.h"
 
-{% macro annotated_name(annotated) %}
-    {% if annotated.annotation in ['[]', 'const[]'] %}
-        {% if annotated.integral_count == 0 -%}
-            {{annotated.name.camelCase()}}[{{annotated.constant_count.CamelCase()}}]
-        {%- else -%}
-            {{annotated.name.camelCase()}}[{{annotated.integral_count}}]
-        {%- endif %}
-    {%- else -%}
-        {{annotated.name.camelCase()}}
-    {%- endif -%}
-{% endmacro %}
+#include "vulkan/vulkan.h"
 
-{% macro comma_foreach(list) -%}
-    {%- for element in list -%}
-        {%- if not loop.first -%}
-            ,{{' '}}
-        {%- endif -%}
-        {{caller(element)}}
-    {%- endfor -%}
-{%- endmacro %}
+namespace vk {
+    {% set ClassName = extension.name.CamelCase() + 'Loader' %}
+
+    template<typename To, typename From>
+    To force_cast(const From& from) {
+        return *reinterpret_cast<const To*>(&from);
+    }
+
+    {{ClassName}}::{{ClassName}}() {
+    }
+
+    {% for function in functions %}
+        {{function.return_type.name.Typename()}} {{ClassName}}::{{function.name.camelCase()}}(
+            {%- call(param) utils.comma_foreach(function.params) -%}
+                {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
+            {%- endcall -%}
+        ) {
+            {% set returns_void = function.return_type.name.Typename() != 'void' %}
+            auto cFnPtr = reinterpret_cast<PFN_vk{{function.name.CamelCase()}}>({{function.name.camelCase()}}_);
+            {% if returns_void %}
+                auto result ={{' '}}
+            {%- endif %}
+            cFnPtr(
+                {%- call(param) utils.comma_foreach(function.params) -%}
+                    force_cast<{{utils.annotated_type(param, native=True, array_to_pointer=True)}}>({{param.name.camelCase()}})
+                {%- endcall -%}
+            );
+            {% if returns_void %}
+                return force_cast<{{function.return_type.name.Typename()}}>(result);
+            {% endif %}
+        }
+    {% endfor %}
+}

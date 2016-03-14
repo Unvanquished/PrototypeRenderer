@@ -846,6 +846,7 @@ if __name__ == '__main__':
                 template_prefix = 'Main'
             to_render.append(FileToRender(template_prefix + 'Extension.h', base_dir + extension.filename + '.h', params))
             to_render.append(FileToRender('ExtensionChecks.cpp', base_dir + extension.filename + 'Checks.cpp', params))
+            to_render.append(FileToRender('Extension.cpp', base_dir + extension.filename + '.cpp', params))
 
         env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
         for render in to_render:
