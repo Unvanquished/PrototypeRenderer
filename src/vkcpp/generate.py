@@ -39,15 +39,9 @@ from collections import namedtuple, OrderedDict
 
 #TODO(kangz) do not lower the extensions vendor name and somehow keep ASTC_4x4 instead of ASTC_4X4
 
-# After parsing all names are stored as a list of lowerase words so that conversion to
+# After parsing all names are stored as a list of words so that conversion to
 # other name formatting is possible. For example in vulkan.h enum values are in SNAKE_CASE
 # but in the generated code we want them to be in CamelCase.
-
-def lower_if_mixed(chunk):
-    if not chunk[1:].islower():
-        return chunk[:]
-    else:
-        return chunk.lower()
 
 def split_camelCase(name, is_Camel=False):
     assert(len(name) > 0 and (is_Camel or name[0].islower()))
@@ -55,9 +49,9 @@ def split_camelCase(name, is_Camel=False):
     start = 0
     for (i, char) in enumerate(name):
         if i !=0 and char.isupper() and (i == 0 or not name[i - 1].isupper()):
-            split.append(lower_if_mixed(name[start:i]))
+            split.append(name[start:i])
             start = i
-    split.append(lower_if_mixed(name[start:]))
+    split.append(name[start:])
     return split
 
 def split_CamelCase(name):
@@ -67,7 +61,7 @@ def split_CamelCase(name):
 def split_SNAKE_CASE(name):
     # Can't assert on this because of ASTC_4x4
     # assert(name.isupper())
-    return [chunk.lower() for chunk in name.split('_')]
+    return name.split('_')[:]
 
 def split_Typename(name):
     """Splits Vulkan typenames but not system typenames"""
@@ -87,7 +81,7 @@ def factor_name(name, factorand):
         name = name[:-1]
 
     for i in range(len(factorand.chunks)):
-        assert(name[i] == factorand.chunks[i])
+        assert(name[i].lower() == factorand.chunks[i].lower())
 
     rest = name[len(factorand.chunks):]
 
@@ -107,10 +101,10 @@ class Name:
             self.vendor = ''
 
     def is_vk(self):
-        return self.chunks[0] in ('PFN_vk', 'vk')
+        return self.chunks[0] in ('PFN_vk', 'Vk', 'vk')
 
     def strip_vk(self, chunks):
-        if chunks[0] in ('PFN_vk', 'vk'):
+        if chunks[0] in ('PFN_vk', 'Vk', 'vk'):
             return list(chunks[1:])
         return chunks
 
@@ -127,7 +121,7 @@ class Name:
 
     def camelCase(self):
         chunks = self.strip_vk(self.chunks)
-        return chunks[0] + ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks[1:])) + self.vendor
+        return chunks[0].lower() + ''.join(map(lambda chunk: self.CamelChunk(chunk), chunks[1:])) + self.vendor
 
     def CamelCase(self):
         chunks = self.strip_vk(self.chunks)
@@ -144,6 +138,12 @@ class Name:
     def Typename(self):
         if self.is_vk():
             return self.CamelCase()
+        else:
+            return self.concatcase()
+
+    def nativeTypename(self):
+        if self.is_vk():
+            return self.chunks[0] + self.CamelCase()
         else:
             return self.concatcase()
 
@@ -328,9 +328,9 @@ class BitmaskType(Type):
 
         # Bitmask names always finish with FlagBits with an optional vendor suffix
         has_extension = False
-        if len(self.name) >= 3 and self.name[-2:] == ['flag', 'bits']:
+        if len(self.name) >= 3 and self.name[-2:] == ['Flag', 'Bits']:
             self.name = self.name[:-2]
-        elif len(self.name) >= 4 and self.name[-3:-1] == ['flag', 'bits']:
+        elif len(self.name) >= 4 and self.name[-3:-1] == ['Flag', 'Bits']:
             has_extension = True
             self.name = self.name[:-3] + self.name[-1:]
         self.name = Name(self.name)
@@ -345,8 +345,8 @@ class BitmaskType(Type):
                 self.values.append(BitmaskValue(name, int(child.attrib['value'], 0)))
             else:
                 assert('bitpos' in child.attrib)
-                assert(name[-1] == 'bit' or name[-2] == 'bit')
-                if name[-1] == 'bit':
+                assert(name[-1] == 'BIT' or name[-2] == 'BIT')
+                if name[-1] == 'BIT':
                     name = factor_name(name[:-1], self.name)
                 else:
                     name = factor_name(name[:-2] + name[-1:], self.name)
@@ -515,6 +515,7 @@ class Extension:
         self.name = Name(split_SNAKE_CASE(element.attrib['name']))
         if self.is_main:
             self.filename = 'Vulkan'
+            self.name = Name(['Vulkan'])
         else:
             self.filename = self.name.CamelCase()
 
@@ -729,11 +730,11 @@ def parse_vulkan_xml(filename):
 
     interesting_extensions = [
         main_api,
-        extension_dict['vk_khr_surface'],
-        extension_dict['vk_khr_swapchain'],
-        extension_dict['vk_khr_display'],
-        extension_dict['vk_khr_display_swapchain'],
-        extension_dict['vk_ext_debug_report'],
+        extension_dict['VK_KHR_surface'],
+        extension_dict['VK_KHR_swapchain'],
+        extension_dict['VK_KHR_display'],
+        extension_dict['VK_KHR_display_swapchain'],
+        extension_dict['VK_EXT_debug_report'],
     ]
     for extension in interesting_extensions:
         extension.link(type_dict, function_dict)

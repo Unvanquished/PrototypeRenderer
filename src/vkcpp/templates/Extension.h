@@ -101,7 +101,6 @@ namespace vk {
                 {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
             {%- endcall -%}
         );
-
     {% endfor %}
 
     {% for type in struct_types %}
