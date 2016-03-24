@@ -746,12 +746,6 @@ def parse_vulkan_xml(filename):
 
 #TODO(kangz)
 # - Output
-#   - C++ type definitions
-#   - Functions loaders and C++ wrappers for
-#     - Global functions
-#     - Instance functions
-#     - Device functions
-#   - static_assert file for types
 #   - defaults for sType and pNext
 #   - bitmasks convertible to bool
 # - Stretch
@@ -863,5 +857,13 @@ if __name__ == '__main__':
                 outfile.write(content)
 
         # Copy over some non-templated files
-        for name in ['vk_platform.h', 'EnumClassBitmasks.h']:
+        sources = [
+            'vk_platform.h',
+            'EnumClassBitmasks.h',
+            'FunctionLoader.cpp',
+            'FunctionLoader.h',
+            'LoaderManager.cpp',
+            'LoaderManager.h',
+        ]
+        for name in sources:
             shutil.copyfile(args.source_dir + os.path.sep + name, base_dir + name)

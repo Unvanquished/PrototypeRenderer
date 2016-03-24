@@ -30,6 +30,7 @@
 
 {% block extra_headers %}
     #include "EnumClassBitmasks.h"
+    #include "FunctionLoader.h"
 {% endblock %}
 
 //* namespace vk {

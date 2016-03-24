@@ -32,6 +32,7 @@
 #include "{{extension.filename}}.h"
 
 #include "vulkan/vulkan.h"
+#include "LoaderManager.h"
 
 namespace vk {
     {% set ClassName = extension.name.CamelCase() + 'Loader' %}
@@ -41,7 +42,25 @@ namespace vk {
         return *reinterpret_cast<const To*>(&from);
     }
 
-    {{ClassName}}::{{ClassName}}() {
+    {% set globalFunctionNames = [
+        'EnumerateInstanceExtensionProperties',
+        'EnumerateInstanceLayerProperties',
+        'CreateInstance',
+    ] %}
+
+    void {{ClassName}}::LoadGlobalFunctions() {
+        {% for function in functions %}
+            {% if function.name.CamelCase() in globalFunctionNames %}
+                {{function.name.camelCase()}}_ = manager.GetGlobalFunction("vk{{function.name.CamelCase()}}");
+            {% endif %}
+        {% endfor %}
+    }
+    void {{ClassName}}::LoadInstanceFunctions() {
+        {% for function in functions %}
+            {% if not function.name.CamelCase() in globalFunctionNames %}
+                {{function.name.camelCase()}}_ = manager.GetInstanceFunction("vk{{function.name.CamelCase()}}");
+            {% endif %}
+        {% endfor %}
     }
 
     {% for function in functions %}

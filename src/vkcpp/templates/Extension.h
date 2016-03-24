@@ -118,9 +118,12 @@ namespace vk {
     {% endfor %}
 
     {% set ClassName = extension.name.CamelCase() + 'Loader' %}
-    class {{ClassName}} {
+    class {{ClassName}} final : public FunctionLoader {
         public:
-            {{ClassName}}();
+            using FunctionLoader::FunctionLoader;
+
+            void LoadGlobalFunctions() override;
+            void LoadInstanceFunctions() override;
 
             {% for function in functions %}
                 {{function.return_type.name.Typename()}} {{function.name.camelCase()}}(
@@ -131,7 +134,6 @@ namespace vk {
             {% endfor %}
 
         private:
-            using UntypedFnptr = void (*)();
             {% for function in functions %}
                 UntypedFnptr {{function.name.camelCase()}}_ = nullptr;
             {% endfor %}
