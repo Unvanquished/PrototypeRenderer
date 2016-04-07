@@ -302,10 +302,10 @@ class EnumType(Type):
 
     def finalize(self):
         def key_for_value(value):
-            if value < 0:
-                return (1, value)
+            if value.value < 0:
+                return (1, value.value)
             else:
-                return (0, value)
+                return (0, value.value)
         self.values.sort(key=key_for_value)
 
 BitmaskBit = namedtuple('BitmaskBit', ['name', 'bit'])
