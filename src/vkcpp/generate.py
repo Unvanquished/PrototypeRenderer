@@ -810,6 +810,25 @@ def extension_template_args(types, constants, extension):
 
     return params
 
+def choose_extensions(args, extensions):
+    if args.extensions == None:
+        return extensions
+
+    extension_dict = {}
+    for extension in extensions:
+        extension_dict[extension.name.CamelCase()] = extension
+
+    result = []
+    for name in args.extensions.readlines():
+        if not name in extension_dict:
+            print('"' + name + '" is not the name of an extension.')
+            return []
+        result.append(extension_dict[name])
+
+    args.extensions.close()
+
+    return result
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description = 'Outputs a C++ wrapper for the Vulkan C API.',
@@ -817,6 +836,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('xml', metavar='VULKAN_XML', nargs=1, type=open, help ='The Vulkan XML definition to use.')
     parser.add_argument('-t', '--template-dir', default="templates", type=str, help='Directory with template files.')
+    parser.add_argument('-e', '--extensions', default=None, type=open, help='File listing the extensions to generate, one per line.')
     parser.add_argument('-s', '--source-dir', default="sources", type=str, help='Directory with source files.')
     parser.add_argument('-o', '--output-dir', default=None, type=str, help='Output directory for the generated source files.')
     parser.add_argument('--print-dependencies', action='store_true', help='Prints a space separated list of file dependencies, used for CMake integration')
@@ -826,6 +846,8 @@ if __name__ == '__main__':
 
     (types, constants, extensions) = parse_vulkan_xml(args.xml[0])
     args.xml[0].close()
+
+    extensions = choose_extensions(args, extensions)
 
     # Generate a list of files to create, params_dicts will get squashed to create the template parameters
     FileToRender = namedtuple('FileToRender', ['template', 'output', 'params_dicts'])
