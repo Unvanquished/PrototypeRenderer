@@ -39,6 +39,12 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
 
+# GoogleTest
+set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/googletest/googletest)
+add_library(gtest STATIC ${GTEST_DIR}/src/gtest-all.cc)
+target_include_directories(gtest SYSTEM PUBLIC ${GTEST_DIR}/include)
+target_include_directories(gtest PRIVATE ${GTEST_DIR})
+
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # VkCpp
