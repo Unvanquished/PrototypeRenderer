@@ -32,18 +32,53 @@ set(Daemon_OUT ${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(daemon/daemon daemon_build)
 include(DaemonFlags)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/vulkan/include)
-
+# GLFW, only build the library
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
 
-set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# VkCpp
+set(VKCPP_DIR ${SRC_DIR}/vkcpp)
+set(VKCPP_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/vkcpp)
+
+find_package(PythonInterp REQUIRED)
+
+# Check for Jinja2
+message(STATUS "${PYTHON_EXECUTABLE}")
+execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} -c "import jinja2"
+    RESULT_VARIABLE RET)
+if (NOT RET EQUAL 0)
+    message(FATAL_ERROR "Missing dependencies for VkCpp generation, please ensure you have python-jinja2 installed.")
+endif()
+
+set(VKCPP_ARGS ${PYTHON_EXECUTABLE} ${VKCPP_DIR}/generate.py -t ${VKCPP_DIR}/templates -s ${VKCPP_DIR}/sources -o ${VKCPP_OUTPUT_DIR})
+execute_process(
+    COMMAND ${VKCPP_ARGS} --print-dependencies ${VKCPP_DIR}/vk.xml
+    OUTPUT_VARIABLE VKCPP_DEPENDENCIES
+)
+execute_process(
+    COMMAND ${VKCPP_ARGS} --print-outputs ${VKCPP_DIR}/vk.xml
+    OUTPUT_VARIABLE VKCPP_OUTPUTS
+)
+add_custom_command(
+
+    OUTPUT ${VKCPP_OUTPUTS}
+    COMMAND ${VKCPP_ARGS} ${VKCPP_DIR}/vk.xml
+    DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py ${VKCPP_DIR}/vk.xml
+    COMMENT "Generating the VkCPP files."
+)
+add_library(vkcpp STATIC ${VKCPP_OUTPUT_DIR}/Vulkan.cpp)
+target_include_directories(vkcpp SYSTEM PRIVATE ${VKCPP_DIR}/external/vulkan/include)
+
+set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
 AddApplication(
     Target testapp
     ExecutableName testapp
+    Libs vkcpp
     Files ${APP_DIR}/TestApplication.cpp
 )

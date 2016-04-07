@@ -819,29 +819,59 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--template-dir', default="templates", type=str, help='Directory with template files.')
     parser.add_argument('-s', '--source-dir', default="sources", type=str, help='Directory with source files.')
     parser.add_argument('-o', '--output-dir', default=None, type=str, help='Output directory for the generated source files.')
+    parser.add_argument('--print-dependencies', action='store_true', help='Prints a space separated list of file dependencies, used for CMake integration')
+    parser.add_argument('--print-outputs', action='store_true', help='Prints a space separated list of file outputs, used for CMake integration')
 
     args = parser.parse_args()
 
     (types, constants, extensions) = parse_vulkan_xml(args.xml[0])
     args.xml[0].close()
 
+    # Generate a list of files to create, params_dicts will get squashed to create the template parameters
+    FileToRender = namedtuple('FileToRender', ['template', 'output', 'params_dicts'])
+    to_render = []
 
-    if args.output_dir != None:
-        # Generate a list of files to create, params_dicts will get squashed to create the template parameters
-        FileToRender = namedtuple('FileToRender', ['template', 'output', 'params_dicts'])
-        to_render = []
+    base_dir = args.output_dir + os.path.sep
 
-        base_dir = args.output_dir + os.path.sep
+    for extension in extensions:
+        params = [extension_template_args(types, constants, extension)]
+        template_prefix = ''
+        if extension.is_main:
+            template_prefix = 'Main'
+        to_render.append(FileToRender(template_prefix + 'Extension.h', base_dir + extension.filename + '.h', params))
+        to_render.append(FileToRender('ExtensionChecks.cpp', base_dir + extension.filename + 'Checks.cpp', params))
+        to_render.append(FileToRender('Extension.cpp', base_dir + extension.filename + '.cpp', params))
 
-        for extension in extensions:
-            params = [extension_template_args(types, constants, extension)]
-            template_prefix = ''
-            if extension.is_main:
-                template_prefix = 'Main'
-            to_render.append(FileToRender(template_prefix + 'Extension.h', base_dir + extension.filename + '.h', params))
-            to_render.append(FileToRender('ExtensionChecks.cpp', base_dir + extension.filename + 'Checks.cpp', params))
-            to_render.append(FileToRender('Extension.cpp', base_dir + extension.filename + '.cpp', params))
+    FileToCopy = namedtuple('FileToCopy', ['source', 'target'])
+    to_copy = []
 
+    sources = [
+        'vk_platform.h',
+        'EnumClassBitmasks.h',
+        'FunctionLoader.cpp',
+        'FunctionLoader.h',
+        'LoaderManager.cpp',
+        'LoaderManager.h',
+    ]
+    for name in sources:
+        to_copy.append(FileToCopy(args.source_dir + os.path.sep + name, base_dir + name))
+
+    if args.print_dependencies:
+        dependencies = set(
+            [args.template_dir + os.path.sep + 'TemplateUtils.h'] +
+            [args.template_dir + os.path.sep + render.template for render in to_render] +
+            [copy.source for copy in to_copy]
+        )
+        print(';'.join(dependencies), end="")
+
+    elif args.print_outputs:
+        outputs = set(
+            [render.output for render in to_render] +
+            [copy.target for copy in to_copy]
+        )
+        print(';'.join(outputs), end="")
+
+    elif args.output_dir != None:
         env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
         for render in to_render:
             params = OrderedDict()
@@ -857,13 +887,5 @@ if __name__ == '__main__':
                 outfile.write(content)
 
         # Copy over some non-templated files
-        sources = [
-            'vk_platform.h',
-            'EnumClassBitmasks.h',
-            'FunctionLoader.cpp',
-            'FunctionLoader.h',
-            'LoaderManager.cpp',
-            'LoaderManager.h',
-        ]
-        for name in sources:
-            shutil.copyfile(args.source_dir + os.path.sep + name, base_dir + name)
+        for copy in to_copy:
+            shutil.copyfile(copy.source, copy.target)
