@@ -46,23 +46,23 @@ struct Compatible {
 {% endfor %}
 
 {% for typ in enum_types %}
-    static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
+    static_assert(Compatible<{{typ.name.Typename()}}, ::{{typ.name.nativeTypename()}}>::value, "");
 {% endfor %}
 
 {% for typ in bitmask_types %}
-    static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
+    static_assert(Compatible<{{typ.name.Typename()}}, ::{{typ.name.nativeTypename()}}>::value, "");
 {% endfor %}
 
 {% for typ in handle_types %}
-    static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
+    static_assert(Compatible<{{typ.name.Typename()}}, ::{{typ.name.nativeTypename()}}>::value, "");
 {% endfor %}
 
 {% for typ in fnptr_types %}
-    static_assert(Compatible<{{typ.name.Typename()}}, ::PFN_vk{{typ.name.Typename()}}>::value, "");
+    static_assert(Compatible<{{typ.name.Typename()}}, ::{{typ.name.nativeTypename()}}>::value, "");
 {% endfor %}
 
 {% for typ in struct_types %}
-    static_assert(Compatible<{{typ.name.Typename()}}, ::Vk{{typ.name.Typename()}}>::value, "");
+    static_assert(Compatible<{{typ.name.Typename()}}, ::{{typ.name.nativeTypename()}}>::value, "");
     {% for member in typ.members %}
         static_assert(offsetof({{typ.name.Typename()}}, {{member.name.camelCase()}}) == offsetof(::Vk{{typ.name.Typename()}}, {{member.name.camelCase()}}), "");
     {% endfor %}
