@@ -34,6 +34,7 @@ import jinja2
 import re
 import argparse
 import os
+import sys
 import shutil
 from collections import namedtuple, OrderedDict
 
@@ -892,14 +893,14 @@ if __name__ == '__main__':
             [args.template_dir + os.path.sep + render.template for render in to_render] +
             [copy.source for copy in to_copy]
         )
-        print(';'.join(dependencies), end="")
+        sys.stdout.write(';'.join(dependencies))
 
     elif args.print_outputs:
         outputs = set(
             [render.output for render in to_render] +
             [copy.target for copy in to_copy]
         )
-        print(';'.join(outputs), end="")
+        sys.stdout.write(';'.join(outputs))
 
     elif args.output_dir != None:
         env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
