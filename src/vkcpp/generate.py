@@ -526,6 +526,10 @@ class Extension:
         else:
             self.filename = self.name.CamelCase()
 
+        self.protect = ''
+        if 'protect' in element.attrib:
+            self.protect = element.attrib['protect']
+
         self.required_types = []
         self.required_functions = []
         self.enum_values = []
@@ -737,12 +741,8 @@ def parse_vulkan_xml(filename):
 
     interesting_extensions = [
         main_api,
-        extension_dict['VK_KHR_surface'],
-        extension_dict['VK_KHR_swapchain'],
-        extension_dict['VK_KHR_display'],
-        extension_dict['VK_KHR_display_swapchain'],
-        extension_dict['VK_EXT_debug_report'],
-    ]
+    ] + [extension for extension in extension_dict.values() if extension.protect == '']
+
     for extension in interesting_extensions:
         extension.link(type_dict, function_dict)
 
@@ -827,6 +827,7 @@ def choose_extensions(args, extensions):
 
     result = []
     for name in args.extensions.readlines():
+        name = name.strip()
         if not name in extension_dict:
             print('"' + name + '" is not the name of an extension.')
             return []

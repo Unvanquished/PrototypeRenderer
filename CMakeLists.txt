@@ -49,7 +49,7 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # VkCpp
 set(VKCPP_DIR ${SRC_DIR}/vkcpp)
-set(VKCPP_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/vkcpp)
+set(VKCPP_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/vkcpp)
 
 find_package(PythonInterp REQUIRED)
 
@@ -62,7 +62,7 @@ if (NOT RET EQUAL 0)
     message(FATAL_ERROR "Missing dependencies for VkCpp generation, please ensure you have python-jinja2 installed.")
 endif()
 
-set(VKCPP_ARGS ${PYTHON_EXECUTABLE} ${VKCPP_DIR}/generate.py -t ${VKCPP_DIR}/templates -s ${VKCPP_DIR}/sources -o ${VKCPP_OUTPUT_DIR})
+set(VKCPP_ARGS ${PYTHON_EXECUTABLE} ${VKCPP_DIR}/generate.py -e ${VKCPP_DIR}/ExtensionList.txt -t ${VKCPP_DIR}/templates -s ${VKCPP_DIR}/sources -o ${VKCPP_OUTPUT_DIR})
 execute_process(
     COMMAND ${VKCPP_ARGS} --print-dependencies ${VKCPP_DIR}/vk.xml
     OUTPUT_VARIABLE VKCPP_DEPENDENCIES
@@ -75,10 +75,10 @@ add_custom_command(
 
     OUTPUT ${VKCPP_OUTPUTS}
     COMMAND ${VKCPP_ARGS} ${VKCPP_DIR}/vk.xml
-    DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py ${VKCPP_DIR}/vk.xml
+    DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py ${VKCPP_DIR}/vk.xml ${VKCPP_DIR}/ExtensionList.txt
     COMMENT "Generating the VkCPP files."
 )
-add_library(vkcpp STATIC ${VKCPP_OUTPUT_DIR}/Vulkan.cpp)
+add_library(vkcpp STATIC ${VKCPP_OUTPUTS})
 target_include_directories(vkcpp SYSTEM PRIVATE ${VKCPP_DIR}/external/vulkan/include)
 
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
