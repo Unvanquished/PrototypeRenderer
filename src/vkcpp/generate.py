@@ -100,6 +100,13 @@ class Name:
             self.chunks = chunks
             self.vendor = ''
 
+    def fnptr_suffix(self):
+        assert(self.is_vk())
+        if self.chunks[0] == 'PFN_vk':
+            return 'FnPtr'
+        else:
+            return ''
+
     def is_vk(self):
         return self.chunks[0] in ('PFN_vk', 'Vk', 'vk')
 
@@ -137,7 +144,7 @@ class Name:
 
     def Typename(self):
         if self.is_vk():
-            return self.CamelCase()
+            return self.CamelCase() + self.fnptr_suffix()
         else:
             return self.concatcase()
 
