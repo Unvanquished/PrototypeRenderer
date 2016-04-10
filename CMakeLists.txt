@@ -32,6 +32,10 @@ set(Daemon_OUT ${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(daemon/daemon daemon_build)
 include(DaemonFlags)
 
+if(NOT MSVC)
+    set_cxx_flag("-std=c++14")
+endif()
+
 # GLFW, only build the library
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -46,10 +50,11 @@ target_include_directories(gtest SYSTEM PUBLIC ${GTEST_DIR}/include)
 target_include_directories(gtest PRIVATE ${GTEST_DIR})
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 # VkCpp
 set(VKCPP_DIR ${SRC_DIR}/vkcpp)
-set(VKCPP_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/vkcpp)
+set(VKCPP_OUTPUT_DIR ${GENERATED_DIR}/vkcpp)
 
 find_package(PythonInterp REQUIRED)
 
@@ -72,7 +77,6 @@ execute_process(
     OUTPUT_VARIABLE VKCPP_OUTPUTS
 )
 add_custom_command(
-
     OUTPUT ${VKCPP_OUTPUTS}
     COMMAND ${VKCPP_ARGS} ${VKCPP_DIR}/vk.xml
     DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py ${VKCPP_DIR}/vk.xml ${VKCPP_DIR}/ExtensionList.txt
@@ -80,6 +84,15 @@ add_custom_command(
 )
 add_library(vkcpp STATIC ${VKCPP_OUTPUTS})
 target_include_directories(vkcpp SYSTEM PRIVATE ${VKCPP_DIR}/external/vulkan/include)
+target_include_directories(gtest PUBLIC ${GENERATED_DIR})
+
+add_executable(vkcpp_unittests
+    ${VKCPP_DIR}/tests/LoaderTests.cpp
+    ${VKCPP_DIR}/tests/MockGetProc.cpp
+    ${VKCPP_DIR}/tests/MockGetProc.h
+    ${VKCPP_DIR}/tests/VkCppTestsMain.cpp
+)
+target_link_libraries(vkcpp_unittests vkcpp gtest)
 
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
 AddApplication(
