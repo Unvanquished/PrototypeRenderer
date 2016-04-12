@@ -109,20 +109,22 @@ class Name:
             return ''
 
     def is_vk(self):
-        return self.chunks[0] in ('PFN_vk', 'Vk', 'vk')
+        return self.chunks[0] in ('PFN_vk', 'VK', 'Vk', 'vk')
 
     def strip_vk(self, chunks):
-        if chunks[0] in ('PFN_vk', 'Vk', 'vk'):
+        if chunks[0] in ('PFN_vk', 'VK', 'Vk', 'vk'):
             return list(chunks[1:])
         return chunks
 
-    def CamelChunk(self, chunk):
+    def CamelChunk(self, chunk, force_lower=False):
         if chunk in ['1d', '2d', '3d']:
             return chunk.upper()
+        if force_lower:
+            return chunk[0].upper() + chunk[1:].lower()
         return chunk[0].upper() + chunk[1:]
 
     def canonical_case(self):
-        return '_'.join(self.chunks) + self.vendor
+        return ('_'.join(self.chunks) + self.vendor).lower()
 
     def concatcase(self):
         return ''.join(self.chunks) + self.vendor
@@ -156,7 +158,9 @@ class Name:
             return self.concatcase()
 
     def EnumCase(self):
-        result = self.CamelCase()
+        chunks = self.strip_vk(self.chunks)
+        result = ''.join(map(lambda chunk: self.CamelChunk(chunk, force_lower=True), chunks)) + self.vendor
+
         if result[0].isdigit():
             return 'e' + result
         return result
