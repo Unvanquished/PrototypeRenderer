@@ -87,6 +87,7 @@ target_include_directories(vkcpp SYSTEM PRIVATE ${VKCPP_DIR}/external/vulkan/inc
 target_include_directories(gtest PUBLIC ${GENERATED_DIR})
 
 add_executable(vkcpp_unittests
+    ${VKCPP_DIR}/tests/BitmaskTests.cpp
     ${VKCPP_DIR}/tests/LoaderTests.cpp
     ${VKCPP_DIR}/tests/MockGetProc.cpp
     ${VKCPP_DIR}/tests/MockGetProc.h
