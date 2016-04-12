@@ -126,7 +126,7 @@ namespace vk {
             void LoadInstanceFunctions() override;
 
             {% for function in functions %}
-                {{function.return_type.name.Typename()}} {{function.name.camelCase()}}(
+                {{function.return_type.name.Typename()}} {{function.name.CamelCase()}}(
                     {%- call(param) utils.comma_foreach(function.params) -%}
                         {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
                     {%- endcall -%}

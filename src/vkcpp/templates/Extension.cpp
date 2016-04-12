@@ -64,7 +64,7 @@ namespace vk {
     }
 
     {% for function in functions %}
-        {{function.return_type.name.Typename()}} {{ClassName}}::{{function.name.camelCase()}}(
+        {{function.return_type.name.Typename()}} {{ClassName}}::{{function.name.CamelCase()}}(
             {%- call(param) utils.comma_foreach(function.params) -%}
                 {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
             {%- endcall -%}
