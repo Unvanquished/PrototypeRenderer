@@ -51,8 +51,14 @@ namespace vk {
         loaders.push_back(loader);
     }
 
+    void LoaderManager::LoadGlobals() {
+        for (auto loader : loaders) {
+            loader->LoadGlobalFunctions();
+        }
+    }
+
     void LoaderManager::SetInstance(vk::Instance instance) {
-        instance = instance;
+        this->instance = instance;
         for (auto loader : loaders) {
             loader->LoadInstanceFunctions();
         }

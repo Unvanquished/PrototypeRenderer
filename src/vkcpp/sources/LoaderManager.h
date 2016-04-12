@@ -45,6 +45,8 @@ namespace vk {
             UntypedFnptr GetInstanceFunction(const char* name) const;
 
             void RegisterLoader(FunctionLoader* loader);
+
+            void LoadGlobals();
             void SetInstance(vk::Instance instance);
 
         private:
