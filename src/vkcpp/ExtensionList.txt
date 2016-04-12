@@ -1,6 +1,6 @@
 Vulkan
-VKKHRDisplay
-VKKHRDisplaySwapchain
-VKKHRSurface
-VKKHRSwapchain
-VKEXTDebugReport
+KHRDisplay
+KHRDisplaySwapchain
+KHRSurface
+KHRSwapchain
+EXTDebugReport
