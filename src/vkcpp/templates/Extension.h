@@ -111,7 +111,13 @@ namespace vk {
         {%- endif -%}
         {{' '}}{{type.name.Typename()}} {
             {% for member in type.members %}
-                {{utils.annotated_type(member)}} {{utils.annotated_name(member)}};
+                {{utils.annotated_type(member)}} {{utils.annotated_name(member)}}
+                {%- if member.name.camelCase() == 'sType' -%}
+                    {{" "}}= StructureType::{{type.name.Typename()}}
+                {%- elif member.name.camelCase() == 'pNext'-%}
+                    {{" "}}= nullptr
+                {%- endif -%}
+                ;
             {% endfor %}
         };
 
