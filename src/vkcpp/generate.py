@@ -309,7 +309,9 @@ class EnumType(Type):
 
     def add_value(self, name, value):
         if self.factor:
+            vendor = name.vendor
             name = factor_name(name.chunks, self.name)
+            name.vendor = vendor
         self.values.append(EnumValue(name, value))
 
     def finalize(self):
