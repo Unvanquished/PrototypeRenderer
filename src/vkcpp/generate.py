@@ -332,6 +332,7 @@ class BitmaskType(Type):
 
         if element.tag == 'type':
             self.name = Name(split_CamelCase(element.find('name').text))
+            self.original_name = self.name
             return
 
         # Bitmasks are defined as follows:
@@ -342,12 +343,19 @@ class BitmaskType(Type):
 
         # Bitmask names always finish with FlagBits with an optional vendor suffix
         has_extension = False
+        self.original_name = Name(self.name)
         if len(self.name) >= 3 and self.name[-2:] == ['Flag', 'Bits']:
             self.name = self.name[:-2]
         elif len(self.name) >= 4 and self.name[-3:-1] == ['Flag', 'Bits']:
             has_extension = True
             self.name = self.name[:-3] + self.name[-1:]
-        self.name = Name(self.name)
+        self.factor_name = Name(self.name[:])
+        self.name = Name(self.name[:])
+        # In vk.xml bitmaks are defined in two parts:
+        #     <type requires="VkFooFlagBits" category="bitmask">typdef<type>VkFlags</type><name>VkFooFlags</name></type>
+        #     The Bitmask definition as VkFooFlagBits
+        # Others parts of the definition refer to this type as VkFooFlags so we need to add "Flags" to the name
+        self.name.chunks.append('flags')
 
         for child in element:
             name = split_SNAKE_CASE(child.attrib['name'])
@@ -355,25 +363,27 @@ class BitmaskType(Type):
             # Some bitmask use values which are not exact bits in order to have preset
             # combinations, such as cull mode front and back (which is 0b01 | 0b10 == 0b11)
             if 'value' in child.attrib:
-                name = factor_name(name, self.name)
+                name = factor_name(name, self.factor_name)
                 self.values.append(BitmaskValue(name, int(child.attrib['value'], 0)))
             else:
                 assert('bitpos' in child.attrib)
                 assert(name[-1] == 'BIT' or name[-2] == 'BIT')
                 if name[-1] == 'BIT':
-                    name = factor_name(name[:-1], self.name)
+                    name = factor_name(name[:-1], self.factor_name)
                 else:
-                    name = factor_name(name[:-2] + name[-1:], self.name)
+                    name = factor_name(name[:-2] + name[-1:], self.factor_name)
 
                 self.bits.append(BitmaskBit(name, int(child.attrib['bitpos'], 0)))
 
         self.values.sort(key=lambda value: value.value)
 
-        # In vk.xml bitmaks are defined in two parts:
-        #     <type requires="VkFooFlagBits" category="bitmask">typdef<type>VkFlags</type><name>VkFooFlags</name></type>
-        #     The Bitmask definition as VkFooFlagBits
-        # Others parts of the definition refer to this type as VkFooFlags so we need to add "Flags" to the name
-        self.name.chunks.append('flags')
+    def add_bit(self, name, bit):
+        vendor = name.vendor
+        name = name.chunks
+        assert(name[-1] == 'BIT')
+        name = factor_name(name[:-1], self.factor_name)
+        name.vendor = vendor
+        self.bits.append(BitmaskBit(name, bit))
 
     def finalize(self):
         self.values.sort(key=lambda value: value.value)
@@ -540,6 +550,7 @@ class Extension:
         self.required_types = []
         self.required_functions = []
         self.enum_values = []
+        self.bitmask_bits = []
 
         for require in element:
             assert(require.tag == 'require')
@@ -559,15 +570,27 @@ class Extension:
                     extends = Name(split_Typename(required.attrib['extends']))
                     name = Name(split_SNAKE_CASE(required.attrib['name']))
 
-                    direction = +1
-                    if 'dir' in required.attrib and required.attrib['dir'] == '-':
-                        direction = -1
+                    # <enum offset='42' extends='foo' name='bar'/>
+                    if 'offset' in required.attrib:
+                        direction = +1
+                        if 'dir' in required.attrib and required.attrib['dir'] == '-':
+                            direction = -1
 
-                    # Compute the extension enum value as in defined in the specification.
-                    offset = int(required.attrib['offset'], 0)
-                    value = direction * (1000000000 + (extension_number - 1) * 1000 + offset)
+                        # Compute the extension enum value as in defined in the specification.
+                        offset = int(required.attrib['offset'], 0)
+                        value = direction * (1000000000 + (extension_number - 1) * 1000 + offset)
+                        self.enum_values.append(ExtensionEnumValue(name, extends, value))
 
-                    self.enum_values.append(ExtensionEnumValue(name, extends, value))
+                    # <enum value='42' extends='foo' name='bar'/>
+                    elif 'value' in required.attrib:
+                        value = int(required.attrib['value'], 0)
+                        self.enum_values.append(ExtensionEnumValue(name, extends, value))
+
+                    # <enum bitpos='12' extends='foo' name='bar'/>
+                    elif 'bitpos' in required.attrib:
+                        bit = int(required.attrib['bitpos'], 0)
+                        self.bitmask_bits.append(ExtensionEnumValue(name, extends, bit))
+
 
     def link(self, types, functions):
         own_types = set()
@@ -608,6 +631,9 @@ class Extension:
 
         for value in self.enum_values:
             types[value.extends.canonical_case()].add_value(value.name, value.value)
+
+        for bit in self.bitmask_bits:
+            types[bit.extends.canonical_case()].add_bit(bit.name, bit.value)
 
 # A custom Jinja2 template loader that removes the extra indentation
 # of the template blocks so that the output is correctly indented
@@ -731,6 +757,8 @@ def parse_vulkan_xml(filename):
     type_dict = {}
     for typ in types:
         type_dict[typ.name.canonical_case()] = typ
+        if isinstance(typ, BitmaskType):
+            type_dict[typ.original_name.canonical_case()] = typ
 
     function_dict = {}
     for function in functions:
