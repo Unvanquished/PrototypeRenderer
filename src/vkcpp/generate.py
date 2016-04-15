@@ -94,7 +94,7 @@ def factor_name(name, factorand):
 class Name:
     def __init__(self, chunks):
         # TODO(kangz) gather the extension suffixes from the XML file instead
-        if chunks[-1].upper() in ('KHR', 'EXT'):
+        if chunks[-1].upper() in ('KHR', 'EXT', 'IMG'):
             self.chunks = chunks[:-1]
             self.vendor = chunks[-1].upper()
         else:

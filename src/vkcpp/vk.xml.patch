@@ -1,6 +1,6 @@
---- vk.xml.orig	2016-04-14 22:55:38.000000000 -0400
-+++ vk.xml	2016-04-13 01:18:04.000000000 -0400
-@@ -117,14 +117,15 @@
+--- vk.xml.orig	2016-04-15 13:44:23.000000000 -0400
++++ vk.xml	2016-04-14 23:11:45.000000000 -0400
+@@ -123,14 +123,15 @@
          <type category="basetype">typedef <type>uint32_t</type> <name>VkFlags</name>;</type>
          <type category="basetype">typedef <type>uint64_t</type> <name>VkDeviceSize</name>;</type>
          <!-- Basic C types, pulled in via vk_platform.h -->
@@ -24,7 +24,7 @@
          <!-- Bitfield types -->
          <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkFramebufferCreateFlags</name>;</type>               <!-- creation flags -->
          <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkQueryPoolCreateFlags</name>;</type>                 <!-- creation flags -->
-@@ -185,7 +186,7 @@
+@@ -191,7 +192,7 @@
          <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkDescriptorPoolResetFlags</name>;</type>         <!-- Descriptor pool reset flags -->
          <type requires="VkDependencyFlagBits"             category="bitmask">typedef <type>VkFlags</type> <name>VkDependencyFlags</name>;</type>                  <!-- Pipeline barrier and subpass dependency flags -->
              <!-- WSI extensions -->
@@ -33,7 +33,7 @@
          <type requires="VkDisplayPlaneAlphaFlagBitsKHR"   category="bitmask">typedef <type>VkFlags</type> <name>VkDisplayPlaneAlphaFlagsKHR</name>;</type>
          <type requires="VkSurfaceTransformFlagBitsKHR"    category="bitmask">typedef <type>VkFlags</type> <name>VkSurfaceTransformFlagsKHR</name>;</type>
          <type                                             category="bitmask">typedef <type>VkFlags</type> <name>VkSwapchainCreateFlagsKHR</name>;</type>          <!-- creation flags -->
-@@ -332,36 +333,36 @@
+@@ -338,36 +339,36 @@
          <type name="VkDebugReportErrorEXT" category="enum"/>
  
          <!-- The PFN_vk*Function types are used by VkAllocationCallbacks below -->
@@ -77,7 +77,7 @@
      <type>VkDebugReportFlagsEXT</type>                       flags,
      <type>VkDebugReportObjectTypeEXT</type>                  objectType,
      <type>uint64_t</type>                                    object,
-@@ -782,7 +783,7 @@
+@@ -795,7 +796,7 @@
              <member><type>VkExtent3D</type>             <name>extent</name></member>
              <member><type>uint32_t</type>               <name>mipLevels</name></member>
              <member><type>uint32_t</type>               <name>arrayLayers</name></member>
@@ -86,7 +86,7 @@
              <member><type>VkImageTiling</type>          <name>tiling</name></member>
              <member><type>VkImageUsageFlags</type>      <name>usage</name></member>                          <!-- Image usage flags -->
              <member><type>VkSharingMode</type>          <name>sharingMode</name></member>                    <!-- Cross-queue-family sharing mode -->
-@@ -1056,7 +1057,7 @@
+@@ -1074,7 +1075,7 @@
              <member noautovalidity="true" optional="true" len="descriptorCount">const <type>VkSampler</type>*       <name>pImmutableSamplers</name></member>             <!-- Immutable samplers (used if descriptor type is SAMPLER or COMBINED_IMAGE_SAMPLER, is either NULL or contains count number of elements) -->
              <validity>
                  <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_SAMPLER or ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and pname:descriptorCount is not `0` and pname:pImmutableSamplers is not `NULL`, pname:pImmutableSamplers must: be a pointer to an array of pname:descriptorCount valid sname:VkSampler handles</usage>
@@ -95,7 +95,7 @@
              </validity>
          </type>
          <type category="struct" name="VkDescriptorSetLayoutCreateInfo">
-@@ -1113,7 +1114,7 @@
+@@ -1132,7 +1133,7 @@
              <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO -->
              <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
              <member optional="true"><type>VkPipelineShaderStageCreateFlags</type>    <name>flags</name></member>             <!-- Reserved -->
@@ -104,7 +104,7 @@
              <member><type>VkShaderModule</type>         <name>module</name></member>                         <!-- Module containing entry point -->
              <member len="null-terminated">const <type>char</type>*            <name>pName</name></member>                          <!-- Null-terminated entry point name -->
              <member optional="true">const <type>VkSpecializationInfo</type>* <name>pSpecializationInfo</name></member>
-@@ -1252,7 +1253,7 @@
+@@ -1272,7 +1273,7 @@
              <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO -->
              <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
              <member optional="true"><type>VkPipelineMultisampleStateCreateFlags</type>    <name>flags</name></member>        <!-- Reserved -->
@@ -112,8 +112,8 @@
 +            <member><type>VkSampleCountFlags</type>  <name>rasterizationSamples</name></member>           <!-- Number of samples used for rasterization -->
              <member><type>VkBool32</type>               <name>sampleShadingEnable</name></member>            <!-- optional (GL45) -->
              <member><type>float</type>                  <name>minSampleShading</name></member>               <!-- optional (GL45) -->
-             <member optional="true" len="latexmath:[$\lceil{\mathit{rasterizationSamples} \over 32}\rceil$]">const <type>VkSampleMask</type>*    <name>pSampleMask</name></member>                    <!-- Array of sampleMask words, containing ceil(rasterSamples/32) words -->
-@@ -1539,7 +1540,7 @@
+             <member optional="true" len="latexmath:[$\lceil{\mathit{rasterizationSamples} \over 32}\rceil$]">const <type>VkSampleMask</type>*    <name>pSampleMask</name></member>                    <!-- Array of sampleMask words -->
+@@ -1561,7 +1562,7 @@
          <type category="struct" name="VkAttachmentDescription">
              <member optional="true"><type>VkAttachmentDescriptionFlags</type> <name>flags</name></member>
              <member><type>VkFormat</type>               <name>format</name></member>
@@ -122,7 +122,7 @@
              <member><type>VkAttachmentLoadOp</type>     <name>loadOp</name></member>                         <!-- Load operation for color or depth data -->
              <member><type>VkAttachmentStoreOp</type>    <name>storeOp</name></member>                        <!-- Store operation for color or depth data -->
              <member><type>VkAttachmentLoadOp</type>     <name>stencilLoadOp</name></member>                  <!-- Load operation for stencil data -->
-@@ -1966,9 +1967,9 @@
+@@ -1989,9 +1990,9 @@
              <member><type>VkDisplayModeKHR</type>                 <name>displayMode</name></member>              <!-- The mode to use when displaying this surface -->
              <member><type>uint32_t</type>                         <name>planeIndex</name></member>               <!-- The plane on which this surface appears.  Must be between 0 and the value returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR() in pPropertyCount. -->
              <member><type>uint32_t</type>                         <name>planeStackIndex</name></member>          <!-- The z-order of the plane. -->
@@ -134,7 +134,7 @@
              <member><type>VkExtent2D</type>                       <name>imageExtent</name></member>              <!-- size of the images to use with this surface -->
              <validity>
                  <usage>pname:planeIndex must: be less than the number of display planes supported by the device as determined by calling fname:vkGetPhysicalDeviceDisplayPlanePropertiesKHR</usage>
-@@ -1998,7 +1999,7 @@
+@@ -2021,7 +2022,7 @@
              <member><type>VkExtent2D</type>                       <name>maxImageExtent</name></member>           <!-- Supported maximum image width and height for the surface -->
              <member><type>uint32_t</type>                         <name>maxImageArrayLayers</name></member>      <!-- Supported maximum number of image layers for the surface -->
              <member optional="true"><type>VkSurfaceTransformFlagsKHR</type>       <name>supportedTransforms</name></member>      <!-- 1 or more bits representing the transforms supported -->
@@ -143,7 +143,7 @@
              <member optional="true"><type>VkCompositeAlphaFlagsKHR</type>         <name>supportedCompositeAlpha</name></member>  <!-- 1 or more bits representing the alpha compositing modes supported -->
              <member optional="true"><type>VkImageUsageFlags</type>                <name>supportedUsageFlags</name></member>      <!-- Supported image usage flags for the surface -->
          </type>
-@@ -2064,8 +2065,8 @@
+@@ -2087,8 +2088,8 @@
              <member><type>VkSharingMode</type>                    <name>imageSharingMode</name></member>         <!-- Sharing mode used for the presentation images -->
              <member optional="true"><type>uint32_t</type>         <name>queueFamilyIndexCount</name></member>    <!-- Number of queue families having access to the images in case of concurrent sharing mode -->
              <member noautovalidity="true" len="queueFamilyIndexCount">const <type>uint32_t</type>*                  <name>pQueueFamilyIndices</name></member>      <!-- Array of queue family indices having access to the images in case of concurrent sharing mode -->
@@ -154,25 +154,25 @@
              <member><type>VkPresentModeKHR</type>                 <name>presentMode</name></member>              <!-- Which presentation mode to use for presents on this swap chain -->
              <member><type>VkBool32</type>                         <name>clipped</name></member>                  <!-- Specifies whether presentable images may be affected by window clip regions -->
              <member optional="true"><type>VkSwapchainKHR</type>   <name>oldSwapchain</name></member>             <!-- Existing swap chain to replace, if any -->
-@@ -2827,7 +2828,7 @@
+@@ -2850,7 +2851,7 @@
      <enums name="VkStencilFaceFlagBits" type="bitmask">
          <enum bitpos="0"    name="VK_STENCIL_FACE_FRONT_BIT"                         comment="Front face"/>
          <enum bitpos="1"    name="VK_STENCIL_FACE_BACK_BIT"                          comment="Back face"/>
--        <enum value="0x3"   name="VK_STENCIL_FRONT_AND_BACK"                         comment="Front and back faces"/>
-+        <enum value="0x3"   name="VK_STENCIL_FACE_FRONT_AND_BACK"                         comment="Front and back faces"/>
+-        <enum value="0x00000003" name="VK_STENCIL_FRONT_AND_BACK"                         comment="Front and back faces"/>
++        <enum value="0x00000003" name="VK_STENCIL_FACE_FRONT_AND_BACK"                         comment="Front and back faces"/>
      </enums>
      <enums name="VkDescriptorPoolCreateFlagBits" type="bitmask">
          <enum bitpos="0"    name="VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT" comment="Descriptor sets may be freed individually"/>
-@@ -2843,7 +2844,7 @@
+@@ -2866,7 +2867,7 @@
          <enum value="3"     name="VK_PRESENT_MODE_FIFO_RELAXED_KHR"/>
      </enums>
-     <enums name="VkColorSpaceKHR" type="enum" expand="VK_COLORSPACE">
+     <enums name="VkColorSpaceKHR" type="enum">
 -        <enum value="0"     name="VK_COLORSPACE_SRGB_NONLINEAR_KHR"/>
 +        <enum value="0"     name="VK_COLOR_SPACE_SRGB_NONLINEAR_KHR"/>
      </enums>
      <enums name="VkDisplayPlaneAlphaFlagBitsKHR" type="bitmask">
          <enum bitpos="0"    name="VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR"/>
-@@ -3198,7 +3199,7 @@
+@@ -3213,7 +3214,7 @@
              <param><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
              <param><type>VkFormat</type> <name>format</name></param>
              <param><type>VkImageType</type> <name>type</name></param>
@@ -181,7 +181,7 @@
              <param><type>VkImageUsageFlags</type> <name>usage</name></param>
              <param><type>VkImageTiling</type> <name>tiling</name></param>
              <param optional="false,true"><type>uint32_t</type>* <name>pPropertyCount</name></param>
-@@ -4339,7 +4340,7 @@
+@@ -4361,7 +4362,7 @@
          <command queues="graphics,compute" renderpass="both" cmdbufferlevel="primary,secondary">
              <proto><type>void</type> <name>vkCmdWriteTimestamp</name></proto>
              <param externsync="true"><type>VkCommandBuffer</type> <name>commandBuffer</name></param>
@@ -190,7 +190,7 @@
              <param><type>VkQueryPool</type> <name>queryPool</name></param>
              <param><type>uint32_t</type> <name>query</name></param>
              <validity>
-@@ -4705,15 +4706,6 @@
+@@ -4731,17 +4732,6 @@
  
      <!-- SECTION: Vulkan API interface definitions -->
      <feature api="vulkan" name="VK_VERSION_1_0" number="1.0">
@@ -199,14 +199,16 @@
 -        </require>
 -        <require comment="API version">
 -            <type name="VK_API_VERSION"/>
+-            <type name="VK_API_VERSION_1_0"/>
 -            <type name="VK_VERSION_MAJOR"/>
 -            <type name="VK_VERSION_MINOR"/>
 -            <type name="VK_VERSION_PATCH"/>
+-            <type name="VK_HEADER_VERSION"/>
 -        </require>
          <require comment="API constants">
              <enum name="VK_LOD_CLAMP_NONE"/>
              <enum name="VK_REMAINING_MIP_LEVELS"/>
-@@ -4722,7 +4714,6 @@
+@@ -4750,7 +4740,6 @@
              <enum name="VK_ATTACHMENT_UNUSED"/>
              <enum name="VK_TRUE"/>
              <enum name="VK_FALSE"/>
@@ -214,21 +216,3 @@
              <enum name="VK_QUEUE_FAMILY_IGNORED"/>
              <enum name="VK_SUBPASS_EXTERNAL"/>
              <type name="VkPipelineCacheHeaderVersion"/>
-@@ -4969,7 +4960,7 @@
-                 <enum value="&quot;VK_KHR_display&quot;"                name="VK_KHR_DISPLAY_EXTENSION_NAME"/>
-                 <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR"/>
-                 <enum offset="1" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR"/>
--                <type name="VkDisplayPlaneAlphaFlagBitsKHR"/>
-+                <type name="VkDisplayPlaneAlphaFlagsKHR"/>
-                 <type name="VkDisplayPropertiesKHR"/>
-                 <type name="VkDisplayModeParametersKHR"/>
-                 <type name="VkDisplayModePropertiesKHR"/>
-@@ -5072,7 +5063,7 @@
-             <require>
-                 <enum value="1"                                         name="VK_EXT_DEBUG_REPORT_SPEC_VERSION"/>
-                 <enum value="&quot;VK_EXT_debug_report&quot;"           name="VK_EXT_DEBUG_REPORT_EXTENSION_NAME"/>
--                <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT"/>
-+                <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT"/>
-                 <enum offset="1" dir="-" extends="VkResult"             name="VK_ERROR_VALIDATION_FAILED_EXT"/>
-                 <type name="VkDebugReportObjectTypeEXT"/>
-                 <type name="VkDebugReportErrorEXT"/>
