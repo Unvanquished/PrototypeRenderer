@@ -27,34 +27,41 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef VKCPP_LOADER_MANAGER_H_
-#define VKCPP_LOADER_MANAGER_H_
+#include "vkcpp/LoaderManager.h"
 
-#include <vector>
-
-#include "FunctionLoader.h"
-#include "Vulkan.h"
+#include "vulkan/vulkan.h"
 
 namespace vk {
 
-    class LoaderManager {
-        public:
-            LoaderManager(UntypedFnptr getInstanceProcAddr);
+    LoaderManager::LoaderManager(UntypedFnptr getInstanceProcAddr)
+    : untypedGetProc(getInstanceProcAddr) {
+    }
 
-            UntypedFnptr GetGlobalFunction(const char* name) const;
-            UntypedFnptr GetInstanceFunction(const char* name) const;
+    UntypedFnptr LoaderManager::GetGlobalFunction(const char* name) const {
+        auto getProc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(untypedGetProc);
+        return reinterpret_cast<UntypedFnptr>(getProc(nullptr, name));
+    }
 
-            void RegisterLoader(FunctionLoader* loader);
+    UntypedFnptr LoaderManager::GetInstanceFunction(const char* name) const {
+        auto getProc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(untypedGetProc);
+        return reinterpret_cast<UntypedFnptr>(getProc(reinterpret_cast<VkInstance>(instance), name));
+    }
 
-            void LoadGlobals();
-            void SetInstance(vk::Instance instance);
+    void LoaderManager::RegisterLoader(FunctionLoader* loader) {
+        loaders.push_back(loader);
+    }
 
-        private:
-            UntypedFnptr untypedGetProc;
-            Instance instance = nullptr;
-            std::vector<FunctionLoader*> loaders;
-    };
+    void LoaderManager::LoadGlobals() {
+        for (auto loader : loaders) {
+            loader->LoadGlobalFunctions();
+        }
+    }
+
+    void LoaderManager::SetInstance(vk::Instance instance) {
+        this->instance = instance;
+        for (auto loader : loaders) {
+            loader->LoadInstanceFunctions();
+        }
+    }
 
 }
-
-#endif // VKCPP_LOADERMANAGER_H_

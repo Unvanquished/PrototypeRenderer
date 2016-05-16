@@ -27,14 +27,34 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "FunctionLoader.h"
+#ifndef VKCPP_LOADER_MANAGER_H_
+#define VKCPP_LOADER_MANAGER_H_
 
-#include "LoaderManager.h"
+#include <vector>
+
+#include "FunctionLoader.h"
+#include "vkcpp/Vulkan.h"
 
 namespace vk {
 
-    FunctionLoader::FunctionLoader(LoaderManager* manager_): manager(*manager_) {
-        manager_->RegisterLoader(this);
-    }
+    class LoaderManager {
+        public:
+            LoaderManager(UntypedFnptr getInstanceProcAddr);
+
+            UntypedFnptr GetGlobalFunction(const char* name) const;
+            UntypedFnptr GetInstanceFunction(const char* name) const;
+
+            void RegisterLoader(FunctionLoader* loader);
+
+            void LoadGlobals();
+            void SetInstance(vk::Instance instance);
+
+        private:
+            UntypedFnptr untypedGetProc;
+            Instance instance = nullptr;
+            std::vector<FunctionLoader*> loaders;
+    };
 
 }
+
+#endif // VKCPP_LOADERMANAGER_H_

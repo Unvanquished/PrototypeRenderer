@@ -32,7 +32,7 @@
 #include "{{extension.filename}}.h"
 
 #include "vulkan/vulkan.h"
-#include "LoaderManager.h"
+#include "vkcpp/LoaderManager.h"
 
 namespace vk {
     {% set ClassName = extension.name.CamelCase() + 'Loader' %}

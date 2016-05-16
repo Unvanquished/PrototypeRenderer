@@ -695,7 +695,8 @@ def parse_vulkan_xml(filename):
     main_api = None
     extensions = []
 
-    root = xml.etree.ElementTree.parse(filename).getroot()
+    with open(filename) as xml_file:
+        root = xml.etree.ElementTree.parse(xml_file).getroot()
 
     found_bitmask_names = set()
     for enum in root.iter('enums'):
@@ -861,14 +862,15 @@ def choose_extensions(args, extensions):
         extension_dict[extension.name.CamelCase()] = extension
 
     result = []
-    for name in args.extensions.readlines():
+    with open(args.extensions) as f:
+        arg_extensions = f.readlines()
+
+    for name in arg_extensions:
         name = name.strip()
         if not name in extension_dict:
             print('"' + name + '" is not the name of an extension.')
             return []
         result.append(extension_dict[name])
-
-    args.extensions.close()
 
     return result
 
@@ -877,9 +879,9 @@ if __name__ == '__main__':
         description = 'Outputs a C++ wrapper for the Vulkan C API.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('xml', metavar='VULKAN_XML', nargs=1, type=open, help ='The Vulkan XML definition to use.')
+    parser.add_argument('xml', metavar='VULKAN_XML', nargs=1, type=str, help ='The Vulkan XML definition to use.')
     parser.add_argument('-t', '--template-dir', default="templates", type=str, help='Directory with template files.')
-    parser.add_argument('-e', '--extensions', default=None, type=open, help='File listing the extensions to generate, one per line.')
+    parser.add_argument('-e', '--extensions', default=None, type=str, help='File listing the extensions to generate, one per line.')
     parser.add_argument('-s', '--source-dir', default="sources", type=str, help='Directory with source files.')
     parser.add_argument('-o', '--output-dir', default=None, type=str, help='Output directory for the generated source files.')
     parser.add_argument('--print-dependencies', action='store_true', help='Prints a space separated list of file dependencies, used for CMake integration')
@@ -888,7 +890,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     (types, constants, extensions) = parse_vulkan_xml(args.xml[0])
-    args.xml[0].close()
 
     extensions = choose_extensions(args, extensions)
 
@@ -908,32 +909,19 @@ if __name__ == '__main__':
         to_render.append(FileToRender('Extension.cpp', base_dir + extension.filename + '.cpp', params))
 
     FileToCopy = namedtuple('FileToCopy', ['source', 'target'])
-    to_copy = []
-
-    sources = [
-        'vk_platform.h',
-        'EnumClassBitmasks.h',
-        'FunctionLoader.cpp',
-        'FunctionLoader.h',
-        'LoaderManager.cpp',
-        'LoaderManager.h',
-    ]
-    for name in sources:
-        to_copy.append(FileToCopy(args.source_dir + os.path.sep + name, base_dir + name))
 
     if args.print_dependencies:
         dependencies = set(
             [args.template_dir + os.path.sep + 'TemplateUtils.h'] +
             [args.template_dir + os.path.sep + render.template for render in to_render] +
-            [copy.source for copy in to_copy]
+            [os.path.abspath(args.xml[0])]
         )
+        if args.extensions != None:
+            dependencies.add(os.path.abspath(args.extensions))
         sys.stdout.write(';'.join(dependencies))
 
     elif args.print_outputs:
-        outputs = set(
-            [render.output for render in to_render] +
-            [copy.target for copy in to_copy]
-        )
+        outputs = set([render.output for render in to_render])
         sys.stdout.write(';'.join(outputs))
 
     elif args.output_dir != None:
@@ -950,7 +938,3 @@ if __name__ == '__main__':
 
             with open(render.output, 'w') as outfile:
                 outfile.write(content)
-
-        # Copy over some non-templated files
-        for copy in to_copy:
-            shutil.copyfile(copy.source, copy.target)

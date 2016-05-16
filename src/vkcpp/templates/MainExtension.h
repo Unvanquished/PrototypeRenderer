@@ -29,8 +29,8 @@
 {% extends 'Extension.h' %}
 
 {% block extra_headers %}
-    #include "EnumClassBitmasks.h"
-    #include "FunctionLoader.h"
+    #include "vkcpp/EnumClassBitmasks.h"
+    #include "vkcpp/FunctionLoader.h"
 {% endblock %}
 
 //* namespace vk {

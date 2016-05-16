@@ -27,41 +27,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "LoaderManager.h"
+#include "vkcpp/FunctionLoader.h"
 
-#include "vulkan/vulkan.h"
+#include "vkcpp/LoaderManager.h"
 
 namespace vk {
 
-    LoaderManager::LoaderManager(UntypedFnptr getInstanceProcAddr)
-    : untypedGetProc(getInstanceProcAddr) {
-    }
-
-    UntypedFnptr LoaderManager::GetGlobalFunction(const char* name) const {
-        auto getProc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(untypedGetProc);
-        return reinterpret_cast<UntypedFnptr>(getProc(nullptr, name));
-    }
-
-    UntypedFnptr LoaderManager::GetInstanceFunction(const char* name) const {
-        auto getProc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(untypedGetProc);
-        return reinterpret_cast<UntypedFnptr>(getProc(reinterpret_cast<VkInstance>(instance), name));
-    }
-
-    void LoaderManager::RegisterLoader(FunctionLoader* loader) {
-        loaders.push_back(loader);
-    }
-
-    void LoaderManager::LoadGlobals() {
-        for (auto loader : loaders) {
-            loader->LoadGlobalFunctions();
-        }
-    }
-
-    void LoaderManager::SetInstance(vk::Instance instance) {
-        this->instance = instance;
-        for (auto loader : loaders) {
-            loader->LoadInstanceFunctions();
-        }
+    FunctionLoader::FunctionLoader(LoaderManager* manager_): manager(*manager_) {
+        manager_->RegisterLoader(this);
     }
 
 }

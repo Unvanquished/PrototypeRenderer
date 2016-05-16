@@ -41,7 +41,7 @@
 
 {% for header in required_headers %}
     {% if header in ['vk_platform.h'] %}
-        #include "{{header}}"
+        #include "vkcpp/{{header}}"
     {% else %}
         #include <{{header}}>
     {% endif %}
