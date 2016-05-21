@@ -28,18 +28,42 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===========================================================================
 */
 
+#include <GLFW/glfw3.h>
+
+
 #include "common/Common.h"
 #include "common/System.h"
 #include "framework/Application.h"
 #include "framework/BaseCommands.h"
 #include "framework/CommandSystem.h"
 #include "qcommon/qcommon.h"
+#include "renderer/Renderer.h"
 
 namespace Application {
+
+static void OnGLFWError(int code, const char* description) {
+    Sys::Error("A GLFW error %i occured: %s", code, description);
+}
 
 class TestApplication : public Application {
     public:
         TestApplication() {
+            glfwSetErrorCallback(OnGLFWError);
+            if (!glfwInit()) {
+                Sys::Error("Couldn't initialize GLFW");
+            }
+
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            auto window = glfwCreateWindow(640, 480, "TestApp101", NULL, NULL);
+            if (window == nullptr) {
+                Sys::Error("Couldn't create the GLFW window");
+            }
+
+            renderer.Initialize(window);
+        }
+
+        ~TestApplication() {
+            glfwTerminate();
         }
 
         void Frame() override {
@@ -59,8 +83,13 @@ class TestApplication : public Application {
             Cmd::DelayFrame();
             Cmd::ExecuteCommandBuffer();
 
+            renderer.Frame();
+
             Sys::SleepFor(std::chrono::milliseconds(60));
         }
+
+    private:
+        Renderer::Renderer renderer;
 };
 
 INSTANTIATE_APPLICATION(TestApplication);

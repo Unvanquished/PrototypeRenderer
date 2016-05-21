@@ -54,10 +54,17 @@ set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_subdirectory(${SRC_DIR}/vkcpp)
 
+set(RENDERER_DIR ${SRC_DIR}/renderer)
+set(RENDERER_SOURCES
+    ${RENDERER_DIR}/Renderer.cpp
+    ${RENDERER_DIR}/Renderer.h
+)
+
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
 AddApplication(
     Target testapp
     ExecutableName testapp
-    Libs vkcpp
-    Files ${APP_DIR}/TestApplication.cpp
+    Libs glfw vkcpp
+    Files ${APP_DIR}/TestApplication.cpp ${RENDERER_SOURCES}
 )
+target_include_directories(testapp PRIVATE ${SRC_DIR})
