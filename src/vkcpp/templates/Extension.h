@@ -124,7 +124,7 @@ namespace vk {
     {% endfor %}
 
     {% set ClassName = extension.name.CamelCase() + 'Loader' %}
-    class {{ClassName}} final : public FunctionLoader {
+    class {{ClassName}} : public FunctionLoader {
         public:
             using FunctionLoader::FunctionLoader;
 
@@ -136,7 +136,7 @@ namespace vk {
                     {%- call(param) utils.comma_foreach(function.params) -%}
                         {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
                     {%- endcall -%}
-                );
+                ) const;
             {% endfor %}
 
         private:

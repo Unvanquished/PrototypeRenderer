@@ -68,7 +68,7 @@ namespace vk {
             {%- call(param) utils.comma_foreach(function.params) -%}
                 {{utils.annotated_type(param)}} {{utils.annotated_name(param)}}
             {%- endcall -%}
-        ) {
+        ) const {
             {% set returns_void = function.return_type.name.Typename() != 'void' %}
             auto cFnPtr = reinterpret_cast<PFN_vk{{function.name.CamelCase()}}>({{function.name.camelCase()}}_);
             {% if returns_void %}
