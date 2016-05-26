@@ -874,7 +874,7 @@ def choose_extensions(args, extensions):
 
     return result
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
         description = 'Outputs a C++ wrapper for the Vulkan C API.',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
@@ -919,12 +919,14 @@ if __name__ == '__main__':
         if args.extensions != None:
             dependencies.add(os.path.abspath(args.extensions))
         sys.stdout.write(';'.join(dependencies))
+        return 0
 
-    elif args.print_outputs:
+    if args.print_outputs:
         outputs = set([render.output for render in to_render])
         sys.stdout.write(';'.join(outputs))
+        return 0
 
-    elif args.output_dir != None:
+    if args.output_dir != None:
         env = jinja2.Environment(loader=PreprocessingLoader(args.template_dir), trim_blocks=True, lstrip_blocks=True)
         for render in to_render:
             params = OrderedDict()
@@ -938,3 +940,8 @@ if __name__ == '__main__':
 
             with open(render.output, 'w') as outfile:
                 outfile.write(content)
+        return 0
+    return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

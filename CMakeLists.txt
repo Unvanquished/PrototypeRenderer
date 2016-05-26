@@ -50,7 +50,6 @@ target_include_directories(gtest SYSTEM PUBLIC ${GTEST_DIR}/include)
 target_include_directories(gtest PRIVATE ${GTEST_DIR})
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_subdirectory(${SRC_DIR}/vkcpp)
 

@@ -62,20 +62,18 @@ endif()
 execute_process(
     COMMAND ${VKCPP_COMMAND} --print-outputs
     OUTPUT_VARIABLE VKCPP_OUTPUTS
+    RESULT_VARIABLE RET
 )
 if (NOT RET EQUAL 0)
     message(FATAL_ERROR "Failed to get the VkCPP outputs")
 endif()
 
 add_custom_command(
-    OUTPUT ${VKCPP_OUTPUTS}
     COMMAND ${VKCPP_COMMAND}
-    DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py ${VKCPP_DIR}/vk.xml ${VKCPP_DIR}/ExtensionList.txt
+    DEPENDS ${VKCPP_DEPENDENCIES} ${VKCPP_DIR}/generate.py
+    OUTPUT ${VKCPP_OUTPUTS}
     COMMENT "Generating the VkCPP files."
 )
-if (NOT RET EQUAL 0)
-    message(FATAL_ERROR "Failed to generate the VkCPP files")
-endif()
 
 add_library(vkcpp STATIC
     ${VKCPP_HEADER_DIR}/EnumClassBitmasks.h
