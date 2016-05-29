@@ -81,6 +81,7 @@ add_library(vkcpp STATIC
     ${VKCPP_HEADER_DIR}/LoaderManager.h
     ${VKCPP_HEADER_DIR}/vk_platform.h
     ${VKCPP_SRC_DIR}/FunctionLoader.cpp
+    ${VKCPP_SRC_DIR}/GLFW.cpp
     ${VKCPP_SRC_DIR}/LoaderManager.cpp
     ${VKCPP_OUTPUTS}
 )

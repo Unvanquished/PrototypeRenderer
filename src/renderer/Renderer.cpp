@@ -29,13 +29,12 @@
 
 #include "Renderer.h"
 
-// TODO make a glfw vkcpp
-#include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
-
 #include <vkcpp/EXTDebugReport.h>
 #include <vkcpp/LoaderManager.h>
 #include <vkcpp/Vulkan.h>
+
+#include <GLFW/glfw3.h>
+#include <vkcpp/GLFW.h>
 
 #include "common/Common.h"
 #include "framework/System.h"
@@ -47,7 +46,7 @@ namespace Renderer {
         public vk::VulkanLoader {
         public:
             VulkanFunctionPointers():
-                vk::LoaderManager(reinterpret_cast<vk::UntypedFnptr>(glfwGetInstanceProcAddress)),
+                vk::LoaderManager(reinterpret_cast<vk::UntypedFnptr>(vk::GLFW::GetInstanceProcAddress)),
                 vk::VulkanLoader(this)
             {
             }
