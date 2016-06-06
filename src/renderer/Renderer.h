@@ -34,12 +34,21 @@ struct GLFWwindow;
 
 namespace Renderer {
 
+    namespace Vulkan {
+        class Context;
+    }
+
     class Renderer {
         public:
             Renderer();
+            ~Renderer();
+
             void Initialize(GLFWwindow* window);
 
             void Frame();
+
+        private:
+            Vulkan::Context* context = nullptr;
     };
 
 }

@@ -57,13 +57,19 @@ set(RENDERER_DIR ${SRC_DIR}/renderer)
 set(RENDERER_SOURCES
     ${RENDERER_DIR}/Renderer.cpp
     ${RENDERER_DIR}/Renderer.h
+    ${RENDERER_DIR}/VkContext.cpp
+    ${RENDERER_DIR}/VkContext.h
 )
 
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
+set(APP_SOURCES
+    ${APP_DIR}/TestApplication.cpp
+    ${RENDERER_SOURCES}
+)
 AddApplication(
     Target testapp
     ExecutableName testapp
     Libs glfw vkcpp
-    Files ${APP_DIR}/TestApplication.cpp ${RENDERER_SOURCES}
+    Files ${APP_SOURCES}
 )
 target_include_directories(testapp PRIVATE ${SRC_DIR})
