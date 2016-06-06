@@ -91,7 +91,9 @@ namespace Renderer {
         struct DeviceInfo {
             std::vector<vk::LayerProperties> layers;
             std::vector<vk::ExtensionProperties> extensions;
+            std::vector<vk::QueueFamilyProperties> queueFamilies;
             vk::PhysicalDeviceProperties properties;
+            vk::PhysicalDeviceMemoryProperties memory;
         };
 
         vk::Result GetDeviceInfo(const VulkanFunctionPointers& vk, vk::PhysicalDevice device, DeviceInfo* info) {
@@ -105,6 +107,12 @@ namespace Renderer {
             info->extensions.resize(extensionCount);
             VK_TRY(vk.EnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, info->extensions.data()));
 
+            uint32_t familyCount = 0;
+            vk.GetPhysicalDeviceQueueFamilyProperties(device, &familyCount, nullptr);
+            info->queueFamilies.resize(familyCount);
+            vk.GetPhysicalDeviceQueueFamilyProperties(device, &familyCount, info->queueFamilies.data());
+
+            vk.GetPhysicalDeviceMemoryProperties(device, &info->memory);
             vk.GetPhysicalDeviceProperties(device, &info->properties);
 
             return vk::Result::Success;
@@ -142,14 +150,45 @@ namespace Renderer {
         }
 
         // Create the instance
-        // TODO(kangz) query GLFW for the required extensions
         vk::Instance instance;
         {
-            const char* globalExtensionsRequired[] = {
-                "VK_KHR_surface",
-                "VK_KHR_xlib_surface",
-                "VK_EXT_debug_report",
-            };
+            using ExtensionSet = std::unordered_set<std::string>;
+
+            ExtensionSet available, required, optional;
+            {
+                int count = 0;
+                const char** glfwRequiredExtensions = glfwGetRequiredInstanceExtensions(&count);
+                ASSERT(glfwRequiredExtensions != nullptr);
+
+                while (count --> 0) {
+                    required.insert(glfwRequiredExtensions[count]);
+                }
+
+                for (const auto& extension : instanceInfo.extensions) {
+                    available.insert(extension.extensionName);
+                }
+
+                optional.insert("VK_EXT_debug_report");
+            }
+
+            std::vector<const char*> extensionPointers;
+            {
+                for (const auto& extension : required) {
+                    if (available.count(extension) == 0) {
+                        Sys::Error("Required Vulkan extension %s not available.", extension);
+                    }
+                    extensionPointers.push_back(extension.c_str());
+                }
+
+                for (const auto& extension : optional) {
+                    if (available.count(extension) == 0) {
+                        Log::Notice("NOT using Vulkan extension %s", extension);
+                    } else {
+                        Log::Notice("Using Vulkan extension %s", extension);
+                        extensionPointers.push_back(extension.c_str());
+                    }
+                }
+            }
 
             const vk::ApplicationInfo appInfo = {
                 .pApplicationName = "PrototypeRenderer",
@@ -161,8 +200,8 @@ namespace Renderer {
             };
             const vk::InstanceCreateInfo instanceInfo = {
                 .pApplicationInfo = &appInfo,
-                .enabledExtensionCount = 3,
-                .ppEnabledExtensionNames = globalExtensionsRequired,
+                .enabledExtensionCount = static_cast<uint32_t>(extensionPointers.size()),
+                .ppEnabledExtensionNames = extensionPointers.data(),
             };
             result = vk.CreateInstance(&instanceInfo, nullptr, &instance);
             ASSERT(result == vk::Result::Success);
@@ -200,6 +239,77 @@ namespace Renderer {
             for (const auto& extension : deviceInfo.extensions) {
                 Log::Debug(" - %s", extension.extensionName);
             }
+        }
+
+        uint32_t graphicsQueueFamily = 0;
+        uint32_t presentQueueFamily = 0;
+        {
+            bool hasGraphics = false;
+            bool hasPresent = false;
+            for (size_t i = 0; i < deviceInfo.queueFamilies.size(); ++i) {
+                auto flags = deviceInfo.queueFamilies[i].queueFlags;
+
+                auto kGraphicsFlags = vk::QueueFlags::Graphics | vk::QueueFlags::Compute | vk::QueueFlags::Transfer;
+                if (!hasGraphics && (flags & kGraphicsFlags)) {
+                    graphicsQueueFamily = i;
+                    hasGraphics = true;
+                }
+
+                if (!hasPresent && vk::GLFW::GetPhysicalDevicePresentationSupport(instance, physicalDevice, i)) {
+                    presentQueueFamily = i;
+                    hasPresent = true;
+                }
+            }
+
+            ASSERT(hasGraphics && hasPresent);
+        }
+
+        vk::Device device;
+        {
+            const float kOnes[] = {1.0f, 1.0f};
+
+            std::vector<vk::DeviceQueueCreateInfo> queueFamilies;
+
+            {
+                vk::DeviceQueueCreateInfo familyInfo = {
+                    .queueFamilyIndex = graphicsQueueFamily,
+                    .queueCount = (graphicsQueueFamily == presentQueueFamily) ? uint32_t(2) : uint32_t(1),
+                    .pQueuePriorities = kOnes
+                };
+                queueFamilies.push_back(familyInfo);
+            }
+
+            if (graphicsQueueFamily != presentQueueFamily) {
+                vk::DeviceQueueCreateInfo familyInfo = {
+                    .queueFamilyIndex = presentQueueFamily,
+                    .queueCount = 1,
+                    .pQueuePriorities = kOnes
+                };
+                queueFamilies.push_back(familyInfo);
+            }
+
+            const char* kKHRSwapchain = "VK_KHR_swapchain";
+            const vk::DeviceCreateInfo deviceInfo = {
+                .queueCreateInfoCount = static_cast<uint32_t>(queueFamilies.size()),
+                .pQueueCreateInfos = queueFamilies.data(),
+                .enabledLayerCount = 0,
+                .ppEnabledLayerNames = nullptr,
+                .enabledExtensionCount = 1,
+                .ppEnabledExtensionNames = &kKHRSwapchain,
+                .pEnabledFeatures = nullptr
+            };
+
+            result = vk.CreateDevice(physicalDevice, &deviceInfo, nullptr, &device);
+            ASSERT(result == vk::Result::Success);
+        }
+
+        vk::Queue graphicsQueue;
+        vk::Queue presentQueue;
+        {
+            vk.GetDeviceQueue(device, graphicsQueueFamily, 0, &graphicsQueue);
+
+            uint32_t presentOffset = (graphicsQueueFamily == presentQueueFamily) ? 1 : 0;
+            vk.GetDeviceQueue(device, presentQueueFamily, presentOffset, &presentQueue);
         }
 
         exit(0);
