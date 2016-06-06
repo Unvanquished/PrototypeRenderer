@@ -78,7 +78,7 @@ namespace vk {
         using T = typename LowerBitmask<T1>::type;
         using integral = typename std::underlying_type<T>::type;
         T l = LowerBitmask<T1>::Lower(left);
-        T r = LowerBitmask<T1>::Lower(right);
+        T r = LowerBitmask<T2>::Lower(right);
         return static_cast<integral>(l) | static_cast<integral>(r);
     }
     template<typename T1, typename T2, typename = typename std::enable_if<
@@ -89,7 +89,7 @@ namespace vk {
         using T = typename LowerBitmask<T1>::type;
         using integral = typename std::underlying_type<T>::type;
         T l = LowerBitmask<T1>::Lower(left);
-        T r = LowerBitmask<T1>::Lower(right);
+        T r = LowerBitmask<T2>::Lower(right);
         return static_cast<integral>(l) & static_cast<integral>(r);
     }
     template<typename T1, typename T2, typename = typename std::enable_if<
@@ -100,7 +100,7 @@ namespace vk {
         using T = typename LowerBitmask<T1>::type;
         using integral = typename std::underlying_type<T>::type;
         T l = LowerBitmask<T1>::Lower(left);
-        T r = LowerBitmask<T1>::Lower(right);
+        T r = LowerBitmask<T2>::Lower(right);
         return static_cast<integral>(l) ^ static_cast<integral>(r);
     }
     template<typename T1>

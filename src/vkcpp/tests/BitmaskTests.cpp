@@ -72,3 +72,9 @@ TEST(BitmaskTests, BoolConversion) {
         ASSERT_TRUE(false);
     }
 }
+
+TEST(BitmaskTests, ThreeOrs) {
+    using Flags = vk::QueueFlags;
+    Flags f = Flags::Graphics | Flags::Compute | Flags::Transfer;
+    ASSERT_EQ(7, static_cast<uint32_t>(f));
+}
