@@ -30,7 +30,9 @@
 #ifndef RENDERER_VKCONTEXT_H_
 #define RENDERER_VKCONTEXT_H_
 
-#include <vkcpp/EXTDebugReport.h>
+#include <vkcpp/KHRDisplay.h>
+#include <vkcpp/KHRSurface.h>
+#include <vkcpp/KHRSwapchain.h>
 #include <vkcpp/LoaderManager.h>
 #include <vkcpp/Vulkan.h>
 
@@ -38,7 +40,6 @@ struct GLFWwindow;
 
 namespace Renderer {
 namespace Vulkan {
-
 
     #define VK_TRY(expression) \
         { \
@@ -78,10 +79,15 @@ namespace Vulkan {
 
     class FunctionPointers :
         public vk::LoaderManager,
-        public vk::VulkanLoader {
+        public vk::VulkanLoader,
+        public vk::KHRDisplayLoader,
+        public vk::KHRSurfaceLoader,
+        public vk::KHRSwapchainLoader {
         public:
             FunctionPointers();
     };
+
+    class Swapchain;
 
     class Context {
         public:
@@ -95,8 +101,11 @@ namespace Vulkan {
 
         private:
             bool InitializeGlobalInfo(std::string applicationName, uint32_t applicationVersion);
+
             GlobalInfo info;
             FunctionPointers vk;
+
+            Swapchain* swapchain = nullptr;
     };
 
 }

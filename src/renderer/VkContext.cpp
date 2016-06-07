@@ -29,6 +29,8 @@
 
 #include "VkContext.h"
 
+#include "VkSwapchain.h"
+
 #include <GLFW/glfw3.h>
 #include <vkcpp/GLFW.h>
 
@@ -86,21 +88,29 @@ namespace Vulkan {
 
     FunctionPointers::FunctionPointers():
         vk::LoaderManager(reinterpret_cast<vk::UntypedFnptr>(vk::GLFW::GetInstanceProcAddress)),
-        vk::VulkanLoader(this)
+        vk::VulkanLoader(this),
+        vk::KHRDisplayLoader(this),
+        vk::KHRSurfaceLoader(this),
+        vk::KHRSwapchainLoader(this)
     {
     }
 
     Context::Context() {
+        swapchain = new Swapchain(this);
     }
 
     Context::~Context() {
         // TODO(kangz) WaitIdle and destroy things in the GlobalInfo
-        // we will need to have booleans to know what has been initialized since
-        // there are no invalid values for Vulkan Handles
+
+        delete swapchain;
     }
 
     bool Context::Initialize(GLFWwindow* window, std::string applicationName, uint32_t applicationVersion) {
         if (!InitializeGlobalInfo(applicationName, applicationVersion)) {
+            return false;
+        }
+
+        if (!swapchain->Initialize(window)) {
             return false;
         }
 
@@ -145,6 +155,10 @@ namespace Vulkan {
 
                 while (count --> 0) {
                     required.insert(glfwRequiredExtensions[count]);
+                }
+
+                for (const auto& extension : swapchain->GetRequiredGlobalExtensions()) {
+                    required.insert(extension);
                 }
 
                 for (const auto& extension : info.instanceInfo.extensions) {
@@ -274,6 +288,7 @@ namespace Vulkan {
                 queueFamilies.push_back(familyInfo);
             }
 
+            // TODO(kangz) find a better way to ask part of the renderer what extensions they would like
             const char* kKHRSwapchain = "VK_KHR_swapchain";
             const vk::DeviceCreateInfo deviceInfo = {
                 .queueCreateInfoCount = static_cast<uint32_t>(queueFamilies.size()),

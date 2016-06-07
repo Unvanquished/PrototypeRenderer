@@ -59,6 +59,8 @@ set(RENDERER_SOURCES
     ${RENDERER_DIR}/Renderer.h
     ${RENDERER_DIR}/VkContext.cpp
     ${RENDERER_DIR}/VkContext.h
+    ${RENDERER_DIR}/VkSwapchain.cpp
+    ${RENDERER_DIR}/VkSwapchain.h
 )
 
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app)
